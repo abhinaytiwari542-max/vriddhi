@@ -94,9 +94,11 @@ async function main() {
   await prisma.approval.deleteMany();
   await prisma.campaignTarget.deleteMany();
   await prisma.campaign.deleteMany();
+  await prisma.productCrossSell.deleteMany();
   await prisma.opportunity.deleteMany();
   await prisma.agentAction.deleteMany();
   await prisma.payment.deleteMany();
+  await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.product.deleteMany();
   await prisma.customer.deleteMany();
