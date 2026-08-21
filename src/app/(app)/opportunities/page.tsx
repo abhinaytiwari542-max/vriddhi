@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react";
 import { getDemoMerchant } from "@/lib/demo-merchant";
 import { detectAbandonedCheckoutOpportunity } from "@/lib/services/opportunity-engine";
 import { getOpportunityNarrative } from "@/lib/services/opportunity-narrative";
+import { evaluatePolicy } from "@/lib/services/policy-engine";
 import { EmptyState } from "@/components/empty-state";
 import { OpportunityCard } from "@/components/opportunities/opportunity-card";
 
@@ -18,6 +19,15 @@ export default async function OpportunitiesPage() {
 
   const narrative = result.detected ? await getOpportunityNarrative(result) : undefined;
 
+  const policyCheck =
+    result.detected && merchant
+      ? await evaluatePolicy(merchant.id, {
+          campaignCostPaise: result.estimatedCost,
+          perTransactionPaise: result.estimatedCost / result.highIntentCount,
+          discountPercent: (result.estimatedCost / result.highIntentValue) * 100,
+        })
+      : undefined;
+
   return (
     <div className="space-y-8">
       <div>
@@ -31,7 +41,7 @@ export default async function OpportunitiesPage() {
       </div>
 
       {result.detected ? (
-        <OpportunityCard result={result} narrative={narrative} />
+        <OpportunityCard result={result} narrative={narrative} policyCheck={policyCheck} />
       ) : (
         <EmptyState
           tone="ai"

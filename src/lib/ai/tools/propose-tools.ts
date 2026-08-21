@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import type { CampaignStatus } from "@/generated/prisma/client";
 import { defineTool } from "@/lib/ai/tools/types";
+import { evaluatePolicy } from "@/lib/services/policy-engine";
 
 type RecommendedAction = {
   type: string;
@@ -63,6 +64,26 @@ export const createCampaign = defineTool({
     const action = opportunity.recommendedAction as unknown as RecommendedAction;
     const evidence = opportunity.evidence as unknown as EvidenceRow[];
     const evidenceByCustomer = new Map(evidence.map((e) => [e.customerId, e]));
+
+    const averageCartValue =
+      evidence.reduce((sum, e) => sum + e.amount, 0) / Math.max(evidence.length, 1);
+    const discountPercent = (action.discountPerCustomer / Math.max(averageCartValue, 1)) * 100;
+
+    const policyCheck = await evaluatePolicy(merchantId, {
+      campaignCostPaise: opportunity.estimatedCost,
+      perTransactionPaise: action.discountPerCustomer,
+      discountPercent,
+    });
+
+    if (policyCheck.verdict === "BLOCKED") {
+      return {
+        status: "blocked",
+        rule: policyCheck.rule,
+        requested: policyCheck.requested,
+        limit: policyCheck.limit,
+        message: `Blocked by policy: ${policyCheck.rule} — requested ${policyCheck.requested}, limit is ${policyCheck.limit}. No campaign was created.`,
+      };
+    }
 
     const campaign = await prisma.campaign.create({
       data: {

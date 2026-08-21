@@ -4,6 +4,7 @@ import { formatInr } from "@/lib/services/opportunity-engine";
 import { StatusBadge } from "@/components/status-badge";
 import type { AbandonedCheckoutResult } from "@/lib/services/opportunity-engine";
 import type { NarrativeResult } from "@/lib/ai/explain-opportunity";
+import type { PolicyCheckResult } from "@/lib/services/policy-engine";
 
 const RISK_VARIANT = {
   LOW: "success",
@@ -25,9 +26,11 @@ function fallbackReasonCopy(reason: "no_api_key" | "invalid_output" | "api_error
 export function OpportunityCard({
   result,
   narrative,
+  policyCheck,
 }: {
   result: Extract<AbandonedCheckoutResult, { detected: true }>;
   narrative?: NarrativeResult;
+  policyCheck?: PolicyCheckResult;
 }) {
   return (
     <div className="glow-ai rounded-2xl border border-ai/20 bg-gradient-to-b from-ai/[0.06] to-transparent p-6">
@@ -108,11 +111,37 @@ export function OpportunityCard({
         </table>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      {policyCheck && (
+        <div className="mt-5 rounded-lg border border-border p-3">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Policy check</span>
+            <StatusBadge variant={policyCheck.verdict === "PASS" ? "success" : "danger"}>
+              {policyCheck.verdict}
+            </StatusBadge>
+          </div>
+          {policyCheck.verdict === "BLOCKED" ? (
+            <p className="text-xs text-muted-foreground">
+              {policyCheck.rule}: requested {policyCheck.requested}, limit is {policyCheck.limit}.
+              No campaign can be created until this is within limits or the limit is raised in{" "}
+              <span className="text-foreground">Settings</span>.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Within all configured limits — eligible for approval once the Approval Center ships.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
         <button
           disabled
           className="cursor-not-allowed rounded-lg border border-border px-4 py-2 text-xs font-medium text-muted-foreground"
-          title="Approval Center ships in Phase 11"
+          title={
+            policyCheck?.verdict === "BLOCKED"
+              ? "Blocked by policy — cannot be approved as-is"
+              : "Approval Center ships in Phase 11"
+          }
         >
           Review &amp; approve — Phase 11
         </button>
