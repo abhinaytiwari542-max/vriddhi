@@ -8,6 +8,7 @@ import {
   Megaphone,
   ScrollText,
   Settings,
+  ShoppingBag,
   Sparkles,
 } from "lucide-react";
 
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/opportunities", label: "Opportunities", icon: Sparkles },
   { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/agent", label: "Agent", icon: Bot },
+  { href: "/buyer", label: "AI Buyer (Demo)", icon: ShoppingBag },
   { href: "/audit", label: "Audit Trail", icon: ScrollText },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
