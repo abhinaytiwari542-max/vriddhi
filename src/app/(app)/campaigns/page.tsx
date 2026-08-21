@@ -28,14 +28,15 @@ export default async function CampaignsPage() {
           opportunity: true,
           targets: { include: { customer: true } },
           approvals: { include: { actorUser: true }, orderBy: { createdAt: "desc" } },
+          failures: { orderBy: { detectedAt: "desc" }, take: 1 },
         },
         orderBy: { createdAt: "desc" },
       })
     : [];
 
   const drafts = campaigns.filter((c) => c.status === "DRAFT");
-  const approved = campaigns.filter((c) => c.status === "APPROVED");
-  const history = campaigns.filter((c) => !["DRAFT", "APPROVED"].includes(c.status));
+  const actionable = campaigns.filter((c) => c.status === "APPROVED" || c.status === "HALTED");
+  const history = campaigns.filter((c) => !["DRAFT", "APPROVED", "HALTED"].includes(c.status));
 
   return (
     <div className="space-y-10">
@@ -46,7 +47,7 @@ export default async function CampaignsPage() {
         </p>
       </div>
 
-      {drafts.length === 0 && approved.length === 0 && history.length === 0 && (
+      {drafts.length === 0 && actionable.length === 0 && history.length === 0 && (
         <EmptyState
           icon={Megaphone}
           title="No campaigns yet"
@@ -72,19 +73,31 @@ export default async function CampaignsPage() {
         </section>
       )}
 
-      {approved.length > 0 && (
+      {actionable.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-sm font-medium text-foreground">Approved — ready to execute</h2>
-          {approved.map((c) => (
-            <ExecutionCard
-              key={c.id}
-              campaignId={c.id}
-              audienceCount={c.targets.length}
-              discountAmount={c.discountAmount}
-              maxCost={c.maxCost}
-              isSimulated={isSimulated}
-            />
-          ))}
+          <h2 className="text-sm font-medium text-foreground">
+            Approved and executing — ready or needs attention
+          </h2>
+          {actionable.map((c) => {
+            const createdCount = c.targets.filter(
+              (t) => t.status === "LINK_CREATED" || t.status === "PAID"
+            ).length;
+            const remainingCount = c.targets.length - createdCount;
+            return (
+              <ExecutionCard
+                key={c.id}
+                campaignId={c.id}
+                audienceCount={c.targets.length}
+                discountAmount={c.discountAmount}
+                maxCost={c.maxCost}
+                isSimulated={isSimulated}
+                status={c.status as "APPROVED" | "HALTED"}
+                createdCount={createdCount}
+                remainingCount={remainingCount}
+                haltReason={c.failures[0]?.reason}
+              />
+            );
+          })}
         </section>
       )}
 

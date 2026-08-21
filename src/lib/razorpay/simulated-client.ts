@@ -22,14 +22,26 @@ function randomId(prefix: string, length = 14) {
 export class SimulatedRazorpayGateway implements RazorpayGateway {
   readonly mode = "simulated" as const;
 
-  async createPaymentLink(_input: CreatePaymentLinkInput): Promise<PaymentLinkResult> {
+  // In-memory only — resets on server restart. Stands in for "ask
+  // Razorpay directly" so reconciliation is a genuine check against
+  // gateway-side state, not a call that trivially always says "not found".
+  private createdByReference = new Map<string, PaymentLinkResult>();
+
+  async createPaymentLink(input: CreatePaymentLinkInput): Promise<PaymentLinkResult> {
     await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 400));
 
     const id = randomId("plink");
-    return {
+    const result: PaymentLinkResult = {
       id,
       shortUrl: `https://simulated-razorpay.invalid/pl/${id}`,
       status: "created",
     };
+    this.createdByReference.set(input.referenceId, result);
+    return result;
+  }
+
+  async findPaymentLinkByReference(referenceId: string): Promise<PaymentLinkResult | null> {
+    await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 200));
+    return this.createdByReference.get(referenceId) ?? null;
   }
 }

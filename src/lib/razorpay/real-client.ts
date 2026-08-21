@@ -34,4 +34,14 @@ export class RealRazorpayGateway implements RazorpayGateway {
 
     return { id: link.id, shortUrl: link.short_url, status: link.status };
   }
+
+  async findPaymentLinkByReference(referenceId: string): Promise<PaymentLinkResult | null> {
+    // Razorpay's list endpoint doesn't take reference_id as a server-side
+    // filter in this SDK's types, so we page through and match locally.
+    // Fine at this project's scale (checking one target after a failure);
+    // a higher-volume version would need the raw reference_id query param.
+    const { payment_links } = await this.client.paymentLink.all({});
+    const found = payment_links.find((p) => p.reference_id === referenceId);
+    return found ? { id: found.id, shortUrl: found.short_url, status: found.status } : null;
+  }
 }

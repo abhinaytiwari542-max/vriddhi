@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { prisma } from "@/lib/db";
 import { getDemoMerchant, getDemoUser } from "@/lib/demo-merchant";
 import {
   approveCampaign,
@@ -55,7 +56,30 @@ export async function modifyCampaignAction(
   return result;
 }
 
-export async function executeCampaignAction(campaignId: string): Promise<ExecutionResult> {
+export async function executeCampaignAction(
+  campaignId: string,
+  simulateFailure = false
+): Promise<ExecutionResult> {
+  let simulateFailureAtIndex: number | undefined;
+  if (simulateFailure) {
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: { targets: true },
+    });
+    const pendingCount =
+      campaign?.targets.filter((t) => t.status !== "LINK_CREATED" && t.status !== "PAID").length ?? 0;
+    // Fail partway through, not on the very first target — a demo where
+    // nothing succeeded first would be less convincing than "10 of 22 done,
+    // then it stopped."
+    simulateFailureAtIndex = Math.max(1, Math.floor(pendingCount / 2));
+  }
+
+  const result = await executeApprovedCampaign(campaignId, { simulateFailureAtIndex });
+  revalidateAll();
+  return result;
+}
+
+export async function retryCampaignAction(campaignId: string): Promise<ExecutionResult> {
   const result = await executeApprovedCampaign(campaignId);
   revalidateAll();
   return result;

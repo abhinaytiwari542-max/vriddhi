@@ -4,28 +4,60 @@ import { getRazorpayGateway } from "@/lib/razorpay/gateway";
 
 type EvidenceRow = { amount: number };
 
+export type ExecutionOptions = {
+  /**
+   * Demo/test only — forces a simulated timeout on the Nth target
+   * processed in this run (0-indexed among pending targets), so the
+   * failure-handling flow (Phase 14) can be shown on demand instead of
+   * waiting for a real, non-reproducible failure. Never has any effect
+   * against the real gateway in production use — it's a parameter this
+   * service accepts, not something the gateway itself knows about.
+   */
+  simulateFailureAtIndex?: number;
+};
+
 export type ExecutionResult =
-  | { ok: true; created: number; alreadyDone: number; failed: number; mode: "real" | "simulated" }
+  | {
+      ok: true;
+      created: number;
+      alreadyDone: number;
+      halted: boolean;
+      haltReason?: string;
+      remaining: number;
+      mode: "real" | "simulated";
+    }
   | { ok: false; error: string };
 
 /**
- * The sole chokepoint that can call the Razorpay gateway. No tool, no
- * agent, no UI action reaches Razorpay any other way. Re-runs the
- * deterministic policy check a third time (draft -> approval -> here)
- * against current limits, and processes targets one at a time — sequential
- * on purpose, so a mid-run failure (Phase 14) has a well-defined "N of M
- * done" boundary rather than a scattered parallel result. Already-processed
- * targets (LINK_CREATED/PAID) are skipped, so re-running this on a
- * partially-executed campaign is always safe.
+ * The sole chokepoint that can call the Razorpay gateway. Re-runs the
+ * deterministic policy check a third time (draft -> approval -> here), then
+ * processes pending targets one at a time, IN ORDER, and STOPS at the first
+ * failure rather than continuing past it — a timeout on target N tells us
+ * nothing about whether N+1 would have succeeded, so we don't guess.
+ *
+ * On failure, reconciles with the gateway directly (findPaymentLinkByReference)
+ * before concluding anything — a network timeout does not prove the
+ * request never reached Razorpay. Only once reconciliation confirms
+ * nothing was created do we mark the target FAILED and halt; if it turns
+ * out the link *was* created despite the error, we record that instead and
+ * keep going, no duplicate created either way.
+ *
+ * Already-processed targets (LINK_CREATED/PAID) are always skipped, so
+ * calling this again on a HALTED campaign is a safe, scoped retry of only
+ * the remaining targets — not a special "retry" code path, just the same
+ * function.
  */
-export async function executeApprovedCampaign(campaignId: string): Promise<ExecutionResult> {
+export async function executeApprovedCampaign(
+  campaignId: string,
+  options: ExecutionOptions = {}
+): Promise<ExecutionResult> {
   const campaign = await prisma.campaign.findUniqueOrThrow({
     where: { id: campaignId },
     include: { targets: { include: { customer: true } }, opportunity: true },
   });
 
-  if (campaign.status !== "APPROVED") {
-    return { ok: false, error: "Campaign is not approved for execution." };
+  if (campaign.status !== "APPROVED" && campaign.status !== "HALTED") {
+    return { ok: false, error: "Campaign is not in a state that can be executed." };
   }
 
   const evidence = campaign.opportunity.evidence as unknown as EvidenceRow[];
@@ -58,6 +90,10 @@ export async function executeApprovedCampaign(campaignId: string): Promise<Execu
   }
 
   const gateway = getRazorpayGateway();
+  const pendingTargets = campaign.targets.filter(
+    (t) => t.status !== "LINK_CREATED" && t.status !== "PAID"
+  );
+  const alreadyDone = campaign.targets.length - pendingTargets.length;
 
   await prisma.campaign.update({ where: { id: campaignId }, data: { status: "EXECUTING" } });
   await prisma.auditLog.create({
@@ -65,7 +101,7 @@ export async function executeApprovedCampaign(campaignId: string): Promise<Execu
       merchantId: campaign.merchantId,
       actor: "SYSTEM",
       action: "campaign.execution.started",
-      input: { campaignId },
+      input: { campaignId, pendingCount: pendingTargets.length },
       output: { gatewayMode: gateway.mode },
       status: "SUCCESS",
       relatedEntityType: "Campaign",
@@ -74,16 +110,16 @@ export async function executeApprovedCampaign(campaignId: string): Promise<Execu
   });
 
   let created = 0;
-  let alreadyDone = 0;
-  let failed = 0;
+  let haltReason: string | undefined;
 
-  for (const target of campaign.targets) {
-    if (target.status === "LINK_CREATED" || target.status === "PAID") {
-      alreadyDone++;
-      continue;
-    }
+  for (let i = 0; i < pendingTargets.length; i++) {
+    const target = pendingTargets[i];
 
     try {
+      if (options.simulateFailureAtIndex === i) {
+        throw new Error("Payment service timeout (simulated for demo).");
+      }
+
       const link = await gateway.createPaymentLink({
         amountPaise: target.amount,
         currency: "INR",
@@ -112,38 +148,89 @@ export async function executeApprovedCampaign(campaignId: string): Promise<Execu
       });
       created++;
     } catch (err) {
-      failed++;
       const message = err instanceof Error ? err.message : "Unknown error";
-      await prisma.campaignTarget.update({ where: { id: target.id }, data: { status: "FAILED" } });
       await prisma.auditLog.create({
         data: {
           merchantId: campaign.merchantId,
           actor: "RAZORPAY",
           action: "payment_link.failed",
           input: { targetId: target.id },
-          output: { error: message },
           status: "FAILURE",
+          relatedEntityType: "CampaignTarget",
+          relatedEntityId: target.id,
+          error: message,
+        },
+      });
+
+      // Reconciliation — ask the gateway directly rather than assume the
+      // timeout means nothing happened.
+      const reconciled = await gateway.findPaymentLinkByReference(target.id);
+      await prisma.auditLog.create({
+        data: {
+          merchantId: campaign.merchantId,
+          actor: "SYSTEM",
+          action: "payment_link.reconciled",
+          input: { targetId: target.id },
+          output: { foundOnGateway: Boolean(reconciled) },
+          status: "SUCCESS",
           relatedEntityType: "CampaignTarget",
           relatedEntityId: target.id,
         },
       });
+
+      if (reconciled) {
+        // It actually went through despite the client-side error — record
+        // it as created (no duplicate risk: we never call createPaymentLink
+        // again for a target that's already LINK_CREATED) and keep going.
+        await prisma.campaignTarget.update({
+          where: { id: target.id },
+          data: { status: "LINK_CREATED", razorpayPaymentLinkId: reconciled.id },
+        });
+        created++;
+        continue;
+      }
+
+      // Confirmed: nothing was created. Halt — do not touch the remaining
+      // targets this run.
+      await prisma.campaignTarget.update({ where: { id: target.id }, data: { status: "FAILED" } });
+      await prisma.failure.create({
+        data: {
+          campaignId,
+          failedAtTargetId: target.id,
+          reason: message,
+          reconciliationResult: { foundOnGateway: false },
+        },
+      });
+      haltReason = message;
+      break;
     }
   }
 
-  const finalStatus = failed > 0 ? "HALTED" : "COMPLETED";
+  const remaining = pendingTargets.length - created - (haltReason ? 1 : 0);
+  const finalStatus = haltReason ? "HALTED" : "COMPLETED";
+
   await prisma.campaign.update({ where: { id: campaignId }, data: { status: finalStatus } });
   await prisma.auditLog.create({
     data: {
       merchantId: campaign.merchantId,
       actor: "SYSTEM",
-      action: "campaign.execution.finished",
+      action: haltReason ? "campaign.execution.halted" : "campaign.execution.finished",
       input: { campaignId },
-      output: { created, alreadyDone, failed, finalStatus },
-      status: failed > 0 ? "FAILURE" : "SUCCESS",
+      output: { created, alreadyDone, remaining, finalStatus },
+      status: haltReason ? "FAILURE" : "SUCCESS",
       relatedEntityType: "Campaign",
       relatedEntityId: campaignId,
+      error: haltReason,
     },
   });
 
-  return { ok: true, created, alreadyDone, failed, mode: gateway.mode };
+  return {
+    ok: true,
+    created,
+    alreadyDone,
+    halted: Boolean(haltReason),
+    haltReason,
+    remaining,
+    mode: gateway.mode,
+  };
 }
