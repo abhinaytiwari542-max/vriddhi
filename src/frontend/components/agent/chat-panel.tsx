@@ -12,6 +12,8 @@ type Message = {
   text: string;
   trace?: AgentTraceEntry[];
   isError?: boolean;
+  /** Answer came from the tool results, not from the model's prose. */
+  unnarrated?: boolean;
 };
 
 const SUGGESTED_PROMPTS = [
@@ -54,20 +56,22 @@ export function ChatPanel() {
     startTransition(async () => {
       const result = await sendAgentMessage(text, history);
       if (result.ok) {
-        setMessages((prev) => [...prev, { role: "assistant", text: result.answer, trace: result.trace }]);
-      } else {
-        // Tool calls can succeed (and already be persisted — e.g. a real
-        // draft campaign) even if the final summary text then fails to
-        // generate. Don't let a narration failure hide real actions taken.
-        const actedText =
-          result.trace.length > 0
-            ? `I made some progress before hitting an error generating a summary: ${result.trace
-                .map((t) => t.tool)
-                .join(", ")}. Check Campaigns/Overview to see the result — nothing executed without going through the normal policy and approval checks.`
-            : reasonCopy(result.reason);
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", text: actedText, isError: true, trace: result.trace },
+          {
+            role: "assistant",
+            text: result.answer,
+            trace: result.trace,
+            unnarrated: result.unnarrated,
+          },
+        ]);
+      } else {
+        // Reaching here now means the tools produced nothing usable either,
+        // so there is no real result being hidden — runAgentQuery already
+        // falls back to a tool-derived answer whenever one exists.
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: reasonCopy(result.reason), isError: true, trace: result.trace },
         ]);
       }
       requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }));
@@ -125,11 +129,17 @@ export function ChatPanel() {
                     ? "rounded-2xl bg-primary px-4 py-2 text-sm text-primary-foreground"
                     : m.isError
                       ? "rounded-2xl bg-warning/10 px-4 py-2 text-sm text-warning"
-                      : "rounded-2xl bg-muted px-4 py-2 text-sm text-foreground"
+                      : "whitespace-pre-line rounded-2xl bg-muted px-4 py-2 text-sm text-foreground"
                 }
               >
                 {m.text}
               </div>
+              {m.unnarrated && (
+                <p className="text-[11px] text-muted-foreground">
+                  Read straight from your data — the AI could not write it up just now, so these
+                  figures are unnarrated rather than missing.
+                </p>
+              )}
               {m.trace && m.trace.length > 0 && <ToolTrace trace={m.trace} />}
             </div>
             {m.role === "user" && (

@@ -10,6 +10,7 @@ import {
 import { callGemini, hasGeminiKey, isQuotaExhausted } from "@/backend/lib/ai/client";
 import { TOOL_REGISTRY } from "@/backend/lib/ai/tools";
 import { runTool } from "@/backend/lib/ai/tool-runner";
+import { summarizeTrace } from "@/backend/lib/ai/trace-summary";
 
 const AGENT_MODEL = "gemini-3.6-flash";
 const MAX_TOOL_TURNS = 6;
@@ -46,7 +47,14 @@ export type AgentTraceEntry = {
 export type ChatTurn = { role: "user" | "assistant"; text: string };
 
 export type AgentResult =
-  | { ok: true; answer: string; trace: AgentTraceEntry[] }
+  | {
+      ok: true;
+      answer: string;
+      trace: AgentTraceEntry[];
+      /** True when the answer was assembled from tool results because the
+       *  model could not narrate it. The data is real either way. */
+      unnarrated?: boolean;
+    }
   | {
       ok: false;
       reason: "no_api_key" | "api_error" | "quota_exhausted" | "max_turns_exceeded";
@@ -91,6 +99,15 @@ export async function runAgentQuery(
       );
     } catch (err) {
       console.error("[runAgentQuery] Gemini call failed:", err);
+
+      // The tools may already have answered the question before narration
+      // failed. Reporting an error while holding the real result would be
+      // telling the merchant the backend is broken when it worked.
+      const fromTools = summarizeTrace(trace);
+      if (fromTools) {
+        return { ok: true, answer: fromTools, trace, unnarrated: true };
+      }
+
       // Distinguish an exhausted free-tier quota (won't clear until reset)
       // from a genuine fault, so the UI can tell the merchant which it is.
       return {
@@ -125,5 +142,9 @@ export async function runAgentQuery(
     }
   }
 
+  const cappedSummary = summarizeTrace(trace);
+  if (cappedSummary) {
+    return { ok: true, answer: cappedSummary, trace, unnarrated: true };
+  }
   return { ok: false, reason: "max_turns_exceeded", trace };
 }

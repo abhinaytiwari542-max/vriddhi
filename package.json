@@ -14,7 +14,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "test:agent": "tsx scripts/test-agent.ts",
     "red-team:live": "tsx scripts/red-team-live.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "smoke": "tsx --env-file=.env scripts/backend-smoke.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
