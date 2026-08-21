@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  createModelContent,
   createPartFromFunctionResponse,
   createUserContent,
   type Content,
@@ -38,6 +39,12 @@ export type AgentTraceEntry = {
   output: unknown;
 };
 
+/** Final-text-only conversation memory — past tool-call plumbing is not
+ * replayed, only what was said. A new question can always re-call tools
+ * if it needs fresh data; it never needs to re-see how a past answer was
+ * derived to stay coherent. */
+export type ChatTurn = { role: "user" | "assistant"; text: string };
+
 export type AgentResult =
   | { ok: true; answer: string; trace: AgentTraceEntry[] }
   | { ok: false; reason: "no_api_key" | "api_error" | "max_turns_exceeded"; trace: AgentTraceEntry[] };
@@ -49,12 +56,21 @@ export type AgentResult =
  * runTool() actually returned — there is no step where the model's own
  * text output is treated as ground truth about money, orders, or customers.
  */
-export async function runAgentQuery(merchantId: string, userMessage: string): Promise<AgentResult> {
+export async function runAgentQuery(
+  merchantId: string,
+  userMessage: string,
+  history: ChatTurn[] = []
+): Promise<AgentResult> {
   const client = getGeminiClient();
   if (!client) return { ok: false, reason: "no_api_key", trace: [] };
 
   const trace: AgentTraceEntry[] = [];
-  const contents: Content[] = [createUserContent(userMessage)];
+  const contents: Content[] = [
+    ...history.map((turn) =>
+      turn.role === "user" ? createUserContent(turn.text) : createModelContent(turn.text)
+    ),
+    createUserContent(userMessage),
+  ];
   const functionDeclarations = toFunctionDeclarations();
 
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
