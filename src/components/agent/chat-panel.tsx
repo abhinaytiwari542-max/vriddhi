@@ -156,6 +156,7 @@ export function ChatPanel() {
         <button
           disabled={pending || !input.trim()}
           onClick={() => send(input)}
+          aria-label="Send message"
           className="flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
           <Send className="size-4" />

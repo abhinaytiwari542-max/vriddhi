@@ -14,9 +14,17 @@ const PolicyFormSchema = z.object({
   autoExecuteEnabled: z.coerce.boolean(),
 });
 
-export async function updatePolicy(formData: FormData): Promise<void> {
+export type PolicyFormState =
+  | { status: "idle" }
+  | { status: "success" }
+  | { status: "error"; error: string };
+
+export async function updatePolicy(
+  _prevState: PolicyFormState,
+  formData: FormData
+): Promise<PolicyFormState> {
   const merchant = await getDemoMerchant();
-  if (!merchant) return;
+  if (!merchant) return { status: "error", error: "No merchant found." };
 
   const parsed = PolicyFormSchema.safeParse({
     maxCampaignBudget: formData.get("maxCampaignBudget"),
@@ -26,7 +34,9 @@ export async function updatePolicy(formData: FormData): Promise<void> {
     autoExecuteEnabled: formData.get("autoExecuteEnabled") === "on",
   });
 
-  if (!parsed.success) return;
+  if (!parsed.success) {
+    return { status: "error", error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
 
   await prisma.policy.update({
     where: { merchantId: merchant.id },
@@ -42,4 +52,6 @@ export async function updatePolicy(formData: FormData): Promise<void> {
   revalidatePath("/settings");
   revalidatePath("/opportunities");
   revalidatePath("/overview");
+
+  return { status: "success" };
 }

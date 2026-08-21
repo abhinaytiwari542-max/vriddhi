@@ -88,7 +88,7 @@ export function OpportunityCard({
       <div className="mb-2 text-xs font-medium text-muted-foreground">
         Evidence ({result.evidence.length} customers)
       </div>
-      <div className="max-h-64 overflow-y-auto rounded-lg border border-border">
+      <div className="max-h-64 overflow-x-auto overflow-y-auto rounded-lg border border-border">
         <table className="w-full text-left text-xs">
           <thead className="sticky top-0 bg-card text-muted-foreground">
             <tr>

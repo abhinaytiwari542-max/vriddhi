@@ -137,7 +137,7 @@ export default async function CampaignsPage() {
                           {isSimulated ? "SIMULATED gateway" : "Razorpay test mode"}
                         </StatusBadge>
                       </div>
-                      <div className="max-h-48 overflow-y-auto rounded-lg border border-border">
+                      <div className="max-h-48 overflow-x-auto overflow-y-auto rounded-lg border border-border">
                         <table className="w-full text-left text-xs">
                           <thead className="sticky top-0 bg-card text-muted-foreground">
                             <tr>
