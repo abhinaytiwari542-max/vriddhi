@@ -39,11 +39,46 @@ export async function getOpportunityNarrative(
   }
 
   const generated = await explainOpportunity(result);
-  if (generated.ok) {
-    await prisma.opportunity.update({
-      where: { id: result.opportunityId },
-      data: { aiNarrative: generated.narrative, aiNarrativeInputHash: inputHash },
-    });
+
+  // opportunity is only null if the row was deleted between the lookup
+  // above and here — too narrow a race to be worth handling beyond not
+  // crashing; audit logging (which needs a real merchantId) is skipped.
+  if (opportunity) {
+    if (generated.ok) {
+      await prisma.opportunity.update({
+        where: { id: result.opportunityId },
+        data: { aiNarrative: generated.narrative, aiNarrativeInputHash: inputHash },
+      });
+      await prisma.auditLog.create({
+        data: {
+          merchantId: opportunity.merchantId,
+          actor: "AI",
+          action: "opportunity.narrative_generated",
+          input: { opportunityId: result.opportunityId },
+          output: generated.narrative,
+          status: "SUCCESS",
+          relatedEntityType: "Opportunity",
+          relatedEntityId: result.opportunityId,
+        },
+      });
+    } else if (generated.reason !== "no_api_key") {
+      // Not logging the no_api_key case — that's a standing configuration
+      // state, not an event, and would otherwise fire on every page view.
+      await prisma.auditLog.create({
+        data: {
+          merchantId: opportunity.merchantId,
+          actor: "AI",
+          action: "opportunity.narrative_failed",
+          input: { opportunityId: result.opportunityId },
+          output: {},
+          status: "FAILURE",
+          relatedEntityType: "Opportunity",
+          relatedEntityId: result.opportunityId,
+          error: generated.reason,
+        },
+      });
+    }
   }
+
   return generated;
 }

@@ -76,6 +76,19 @@ export const createCampaign = defineTool({
     });
 
     if (policyCheck.verdict === "BLOCKED") {
+      await prisma.auditLog.create({
+        data: {
+          merchantId,
+          actor: "SYSTEM",
+          action: "campaign.blocked",
+          input: { opportunityId: opportunity.id },
+          output: policyCheck,
+          status: "BLOCKED",
+          relatedEntityType: "Opportunity",
+          relatedEntityId: opportunity.id,
+          error: `${policyCheck.rule}: requested ${policyCheck.requested}, limit is ${policyCheck.limit}`,
+        },
+      });
       return {
         status: "blocked",
         rule: policyCheck.rule,
@@ -109,6 +122,19 @@ export const createCampaign = defineTool({
           amount,
         };
       }),
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        merchantId,
+        actor: "SYSTEM",
+        action: "campaign.drafted",
+        input: { opportunityId: opportunity.id },
+        output: { campaignId: campaign.id, audienceCount: action.targetCustomerIds.length },
+        status: "SUCCESS",
+        relatedEntityType: "Campaign",
+        relatedEntityId: campaign.id,
+      },
     });
 
     return {

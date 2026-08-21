@@ -57,6 +57,19 @@ export async function approveCampaign(
     discountPercent,
   });
   if (policyCheck.verdict === "BLOCKED") {
+    await prisma.auditLog.create({
+      data: {
+        merchantId: campaign.merchantId,
+        actor: "MERCHANT",
+        action: "campaign.approval_blocked",
+        input: previousState,
+        output: policyCheck,
+        status: "BLOCKED",
+        relatedEntityType: "Campaign",
+        relatedEntityId: campaignId,
+        error: `${policyCheck.rule}: requested ${policyCheck.requested}, limit is ${policyCheck.limit}`,
+      },
+    });
     return {
       ok: false,
       error: `Blocked by policy: ${policyCheck.rule} — requested ${policyCheck.requested}, limit is ${policyCheck.limit}.`,
@@ -72,6 +85,18 @@ export async function approveCampaign(
         decision: "APPROVE",
         previousState,
         approvedState: previousState,
+      },
+    }),
+    prisma.auditLog.create({
+      data: {
+        merchantId: campaign.merchantId,
+        actor: "MERCHANT",
+        action: "campaign.approved",
+        input: previousState,
+        output: previousState,
+        status: "SUCCESS",
+        relatedEntityType: "Campaign",
+        relatedEntityId: campaignId,
       },
     }),
   ]);
@@ -105,6 +130,18 @@ export async function rejectCampaign(
         approvedState: previousState,
       },
     }),
+    prisma.auditLog.create({
+      data: {
+        merchantId: campaign.merchantId,
+        actor: "MERCHANT",
+        action: "campaign.rejected",
+        input: previousState,
+        output: previousState,
+        status: "SUCCESS",
+        relatedEntityType: "Campaign",
+        relatedEntityId: campaignId,
+      },
+    }),
   ]);
 
   return { ok: true };
@@ -136,6 +173,19 @@ export async function modifyCampaign(
     discountPercent,
   });
   if (policyCheck.verdict === "BLOCKED") {
+    await prisma.auditLog.create({
+      data: {
+        merchantId: campaign.merchantId,
+        actor: "MERCHANT",
+        action: "campaign.modify_blocked",
+        input: { ...previousState, requestedDiscountAmount: newDiscountPaise },
+        output: policyCheck,
+        status: "BLOCKED",
+        relatedEntityType: "Campaign",
+        relatedEntityId: campaignId,
+        error: `${policyCheck.rule}: requested ${policyCheck.requested}, limit is ${policyCheck.limit}`,
+      },
+    });
     return {
       ok: false,
       error: `Blocked by policy: ${policyCheck.rule} — requested ${policyCheck.requested}, limit is ${policyCheck.limit}.`,
@@ -168,6 +218,18 @@ export async function modifyCampaign(
         decision: "MODIFY",
         previousState,
         approvedState,
+      },
+    }),
+    prisma.auditLog.create({
+      data: {
+        merchantId: campaign.merchantId,
+        actor: "MERCHANT",
+        action: "campaign.modified",
+        input: previousState,
+        output: approvedState,
+        status: "SUCCESS",
+        relatedEntityType: "Campaign",
+        relatedEntityId: campaignId,
       },
     }),
   ]);

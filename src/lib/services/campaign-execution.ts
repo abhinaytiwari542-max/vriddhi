@@ -38,6 +38,19 @@ export async function executeApprovedCampaign(campaignId: string): Promise<Execu
     discountPercent,
   });
   if (policyCheck.verdict === "BLOCKED") {
+    await prisma.auditLog.create({
+      data: {
+        merchantId: campaign.merchantId,
+        actor: "SYSTEM",
+        action: "campaign.execution_blocked",
+        input: { campaignId },
+        output: policyCheck,
+        status: "BLOCKED",
+        relatedEntityType: "Campaign",
+        relatedEntityId: campaignId,
+        error: `${policyCheck.rule}: requested ${policyCheck.requested}, limit is ${policyCheck.limit}`,
+      },
+    });
     return {
       ok: false,
       error: `Blocked by policy at execution time: ${policyCheck.rule} — requested ${policyCheck.requested}, limit is ${policyCheck.limit}.`,

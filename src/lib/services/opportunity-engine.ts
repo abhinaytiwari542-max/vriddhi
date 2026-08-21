@@ -195,9 +195,34 @@ export async function detectAbandonedCheckoutOpportunity(
     risk,
   };
 
+  const numbersChanged =
+    existing &&
+    (existing.estimatedCost !== estimatedCost ||
+      existing.impactMin !== impactMin ||
+      existing.impactMax !== impactMax ||
+      (existing.evidence as unknown[]).length !== evidence.length);
+
   const opportunity = existing
     ? await prisma.opportunity.update({ where: { id: existing.id }, data })
     : await prisma.opportunity.create({ data });
+
+  // Only audit-log when something actually changed — this function runs on
+  // every /overview and /opportunities page view, and logging a "detected"
+  // event on every idempotent re-check would flood the trail with noise.
+  if (!existing || numbersChanged) {
+    await prisma.auditLog.create({
+      data: {
+        merchantId,
+        actor: "SYSTEM",
+        action: existing ? "opportunity.updated" : "opportunity.detected",
+        input: { type: "ABANDONED_CHECKOUT" },
+        output: { totalAbandonedCount: scored.length, highIntentCount: highIntent.length, estimatedCost },
+        status: "SUCCESS",
+        relatedEntityType: "Opportunity",
+        relatedEntityId: opportunity.id,
+      },
+    });
+  }
 
   return {
     detected: true,
