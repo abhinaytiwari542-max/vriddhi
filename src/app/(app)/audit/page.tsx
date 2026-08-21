@@ -19,6 +19,7 @@ const ACTOR_LABEL = {
   AI: "AI",
   MERCHANT: "Merchant",
   RAZORPAY: "Razorpay",
+  CUSTOMER: "Customer",
 } as const;
 
 const LOG_LIMIT = 200;

@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Bot, Check, ShoppingBag, Wrench } from "lucide-react";
+import { AlertTriangle, Ban, Bot, Check, ShoppingBag, Wrench } from "lucide-react";
 
 import { StatusBadge } from "@/components/status-badge";
-import { sendBuyerMessage, authorizePurchaseAction } from "@/app/(app)/buyer/actions";
+import {
+  sendBuyerMessage,
+  authorizePurchaseAction,
+  cancelOrderAction,
+} from "@/app/(app)/buyer/actions";
 import type { BuyerTraceEntry } from "@/lib/ai/buyer-agent";
 
 type Proposal = { orderId: string; productName: string; priceRupees: number; deliveryEstimate: string | null };
@@ -16,6 +20,11 @@ type Turn = {
   proposal?: Proposal;
   error?: string;
 };
+
+type OrderDecision =
+  | { kind: "success"; mode: string; paymentLinkId: string }
+  | { kind: "failed"; error: string }
+  | { kind: "cancelled" };
 
 const SUGGESTED = [
   "Find running shoes under ₹3,000.",
@@ -43,9 +52,8 @@ export function BuyerPanel() {
   const [message, setMessage] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [pending, startTransition] = useTransition();
-  const [authorized, setAuthorized] = useState<Record<string, { mode: string; paymentLinkId: string } | "error">>(
-    {}
-  );
+  const [decisions, setDecisions] = useState<Record<string, OrderDecision>>({});
+  const [simulateFailure, setSimulateFailure] = useState(false);
 
   function send(text: string) {
     if (!text.trim() || pending) return;
@@ -77,11 +85,20 @@ export function BuyerPanel() {
 
   function authorize(orderId: string) {
     startTransition(async () => {
-      const result = await authorizePurchaseAction(orderId, Number(budget) || 0);
-      setAuthorized((prev) => ({
+      const result = await authorizePurchaseAction(orderId, Number(budget) || 0, simulateFailure);
+      setDecisions((prev) => ({
         ...prev,
-        [orderId]: result.ok ? { mode: result.mode, paymentLinkId: result.paymentLinkId } : "error",
+        [orderId]: result.ok
+          ? { kind: "success", mode: result.mode, paymentLinkId: result.paymentLinkId }
+          : { kind: "failed", error: result.error },
       }));
+    });
+  }
+
+  function cancel(orderId: string) {
+    startTransition(async () => {
+      const result = await cancelOrderAction(orderId);
+      if (result.ok) setDecisions((prev) => ({ ...prev, [orderId]: { kind: "cancelled" } }));
     });
   }
 
@@ -146,42 +163,17 @@ export function BuyerPanel() {
                     </div>
                   )}
 
-                  {t.proposal &&
-                    (authorized[t.proposal.orderId] ? (
-                      authorized[t.proposal.orderId] === "error" ? (
-                        <p className="text-xs text-destructive">Authorization failed — try again.</p>
-                      ) : (
-                        <div className="rounded-xl border border-success/30 bg-success/10 p-3 text-xs">
-                          <p className="flex items-center gap-1.5 font-medium text-success">
-                            <Check className="size-3.5" /> Purchase confirmed
-                          </p>
-                          <p className="mt-1 text-muted-foreground">
-                            {(authorized[t.proposal.orderId] as { mode: string; paymentLinkId: string }).mode ===
-                            "simulated"
-                              ? "SIMULATED payment — "
-                              : "Razorpay test-mode payment — "}
-                            link {(authorized[t.proposal.orderId] as { mode: string; paymentLinkId: string }).paymentLinkId}
-                          </p>
-                        </div>
-                      )
-                    ) : (
-                      <div className="rounded-xl border border-border bg-card p-3">
-                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground">
-                          <ShoppingBag className="size-3.5 text-ai" /> Authorization required
-                        </p>
-                        <p className="mb-2 text-xs text-muted-foreground">
-                          {t.proposal.productName} — ₹{t.proposal.priceRupees}
-                          {t.proposal.deliveryEstimate ? ` · ${t.proposal.deliveryEstimate}` : ""}
-                        </p>
-                        <button
-                          disabled={pending}
-                          onClick={() => authorize(t.proposal!.orderId)}
-                          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                        >
-                          Authorize &amp; pay (test mode)
-                        </button>
-                      </div>
-                    ))}
+                  {t.proposal && (
+                    <ProposalCard
+                      proposal={t.proposal}
+                      decision={decisions[t.proposal.orderId]}
+                      pending={pending}
+                      simulateFailure={simulateFailure}
+                      onSimulateFailureChange={setSimulateFailure}
+                      onAuthorize={() => authorize(t.proposal!.orderId)}
+                      onCancel={() => cancel(t.proposal!.orderId)}
+                    />
+                  )}
                 </div>
               </div>
             )}
@@ -206,6 +198,94 @@ export function BuyerPanel() {
           className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           Ask
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProposalCard({
+  proposal,
+  decision,
+  pending,
+  simulateFailure,
+  onSimulateFailureChange,
+  onAuthorize,
+  onCancel,
+}: {
+  proposal: Proposal;
+  decision?: OrderDecision;
+  pending: boolean;
+  simulateFailure: boolean;
+  onSimulateFailureChange: (v: boolean) => void;
+  onAuthorize: () => void;
+  onCancel: () => void;
+}) {
+  if (decision?.kind === "success") {
+    return (
+      <div className="rounded-xl border border-success/30 bg-success/10 p-3 text-xs">
+        <p className="flex items-center gap-1.5 font-medium text-success">
+          <Check className="size-3.5" /> Purchase confirmed
+        </p>
+        <p className="mt-1 text-muted-foreground">
+          {decision.mode === "simulated" ? "SIMULATED payment — " : "Razorpay test-mode payment — "}
+          link {decision.paymentLinkId}
+        </p>
+      </div>
+    );
+  }
+
+  if (decision?.kind === "cancelled") {
+    return (
+      <div className="rounded-xl border border-border bg-card p-3 text-xs">
+        <p className="flex items-center gap-1.5 font-medium text-muted-foreground">
+          <Ban className="size-3.5" /> Cancelled — no charge
+        </p>
+      </div>
+    );
+  }
+
+  // Undecided, or a failed attempt still open for retry/cancel.
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground">
+        <ShoppingBag className="size-3.5 text-ai" /> Authorization required
+      </p>
+      <p className="mb-2 text-xs text-muted-foreground">
+        {proposal.productName} — ₹{proposal.priceRupees}
+        {proposal.deliveryEstimate ? ` · ${proposal.deliveryEstimate}` : ""}
+      </p>
+
+      {decision?.kind === "failed" && (
+        <p className="mb-2 flex items-center gap-1.5 rounded-lg bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+          <AlertTriangle className="size-3.5" /> Payment failed — no charge. {decision.error}
+        </p>
+      )}
+
+      <label className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={simulateFailure}
+          onChange={(e) => onSimulateFailureChange(e.target.checked)}
+          className="size-3.5 rounded border-border accent-warning"
+        />
+        Simulate a payment failure (demo)
+      </label>
+
+      <div className="flex gap-2">
+        <button
+          disabled={pending}
+          onClick={onAuthorize}
+          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {decision?.kind === "failed" ? "Retry payment" : "Authorize & pay (test mode)"}
+        </button>
+        <button
+          disabled={pending}
+          onClick={onCancel}
+          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+        >
+          Cancel
         </button>
       </div>
     </div>

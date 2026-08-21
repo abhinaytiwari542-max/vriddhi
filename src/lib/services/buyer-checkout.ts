@@ -104,20 +104,22 @@ export async function proposePurchase(input: {
 
 export type PurchaseCompletionResult =
   | { ok: true; paymentLinkId: string; mode: "real" | "simulated" }
-  | { ok: false; error: string };
+  | { ok: false; error: string; retryable: boolean };
 
 /**
  * The only path from a proposed order to an actual charge. Called
  * exclusively by a human clicking "Authorize & pay" — never by the agent
  * loop. Re-validates availability and budget one more time (limits or
  * stock could have changed between proposal and this click) before doing
- * anything, then creates a real (simulated-gateway) test-mode payment link
- * and immediately simulates its completion, since there's no human buyer
- * present in this demo to actually click the link.
+ * anything. The authorization itself is logged (actor CUSTOMER) separately
+ * from whether the payment then succeeds, so "the customer said yes" and
+ * "the payment worked" are two distinct, independently auditable facts —
+ * exactly like the merchant side keeps "approved" separate from "executed."
  */
 export async function completeBuyerPurchase(
   orderId: string,
-  budgetRupees: number
+  budgetRupees: number,
+  options: { simulateFailure?: boolean } = {}
 ): Promise<PurchaseCompletionResult> {
   const order = await prisma.order.findUniqueOrThrow({
     where: { id: orderId },
@@ -125,53 +127,123 @@ export async function completeBuyerPurchase(
   });
 
   if (order.status !== "CREATED") {
-    return { ok: false, error: "This order is no longer awaiting authorization." };
+    return { ok: false, error: "This order is no longer awaiting authorization.", retryable: false };
   }
 
   const item = order.items[0];
   if (!item.product.available) {
-    return { ok: false, error: `${item.product.name} is no longer available.` };
+    return { ok: false, error: `${item.product.name} is no longer available.`, retryable: false };
   }
   const priceRupees = item.product.price / 100;
   if (priceRupees > budgetRupees) {
-    return { ok: false, error: "This order now exceeds the authorized budget — re-check and try again." };
+    return {
+      ok: false,
+      error: "This order now exceeds the authorized budget — re-check and try again.",
+      retryable: false,
+    };
   }
-
-  const gateway = getRazorpayGateway();
-
-  const link = await gateway.createPaymentLink({
-    amountPaise: order.amount,
-    currency: "INR",
-    customerName: order.customer.name,
-    customerEmail: order.customer.email,
-    customerContact: order.customer.phone,
-    description: `AI buyer purchase — ${item.product.name}${gateway.mode === "simulated" ? " (SIMULATED)" : ""}`,
-    referenceId: order.id,
-  });
-
-  await prisma.payment.create({
-    data: {
-      orderId: order.id,
-      razorpayPaymentId: link.id,
-      status: "CAPTURED",
-      amount: order.amount,
-      method: "upi",
-    },
-  });
-  await prisma.order.update({ where: { id: order.id }, data: { status: "PAID" } });
 
   await prisma.auditLog.create({
     data: {
       merchantId: order.merchantId,
-      actor: "RAZORPAY",
-      action: "buyer.purchase_completed",
+      actor: "CUSTOMER",
+      action: "buyer.purchase_authorized",
       input: { orderId: order.id },
-      output: { paymentLinkId: link.id, mode: gateway.mode },
+      output: { priceRupees },
       status: "SUCCESS",
       relatedEntityType: "Order",
       relatedEntityId: order.id,
     },
   });
 
-  return { ok: true, paymentLinkId: link.id, mode: gateway.mode };
+  const gateway = getRazorpayGateway();
+
+  try {
+    if (options.simulateFailure) {
+      throw new Error("Payment declined (simulated for demo).");
+    }
+
+    const link = await gateway.createPaymentLink({
+      amountPaise: order.amount,
+      currency: "INR",
+      customerName: order.customer.name,
+      customerEmail: order.customer.email,
+      customerContact: order.customer.phone,
+      description: `AI buyer purchase — ${item.product.name}${gateway.mode === "simulated" ? " (SIMULATED)" : ""}`,
+      referenceId: order.id,
+    });
+
+    await prisma.payment.create({
+      data: {
+        orderId: order.id,
+        razorpayPaymentId: link.id,
+        status: "CAPTURED",
+        amount: order.amount,
+        method: "upi",
+      },
+    });
+    await prisma.order.update({ where: { id: order.id }, data: { status: "PAID" } });
+
+    await prisma.auditLog.create({
+      data: {
+        merchantId: order.merchantId,
+        actor: "RAZORPAY",
+        action: "buyer.purchase_completed",
+        input: { orderId: order.id },
+        output: { paymentLinkId: link.id, mode: gateway.mode },
+        status: "SUCCESS",
+        relatedEntityType: "Order",
+        relatedEntityId: order.id,
+      },
+    });
+
+    return { ok: true, paymentLinkId: link.id, mode: gateway.mode };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+
+    // Order stays CREATED — not PAID, not CANCELLED. No Payment row is
+    // written as CAPTURED. The customer can retry the exact same order;
+    // nothing here can be double-charged since no charge happened.
+    await prisma.auditLog.create({
+      data: {
+        merchantId: order.merchantId,
+        actor: "RAZORPAY",
+        action: "buyer.payment_failed",
+        input: { orderId: order.id },
+        status: "FAILURE",
+        relatedEntityType: "Order",
+        relatedEntityId: order.id,
+        error: message,
+      },
+    });
+
+    return { ok: false, error: message, retryable: true };
+  }
+}
+
+export type CancelResult = { ok: true } | { ok: false; error: string };
+
+/** The customer declining a proposed purchase — distinct from a failed
+ * payment. Only valid while the order is still CREATED (unpaid, pending). */
+export async function cancelBuyerOrder(orderId: string): Promise<CancelResult> {
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+
+  if (order.status !== "CREATED") {
+    return { ok: false, error: "This order can no longer be cancelled." };
+  }
+
+  await prisma.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } });
+  await prisma.auditLog.create({
+    data: {
+      merchantId: order.merchantId,
+      actor: "CUSTOMER",
+      action: "buyer.purchase_cancelled",
+      input: { orderId },
+      status: "SUCCESS",
+      relatedEntityType: "Order",
+      relatedEntityId: orderId,
+    },
+  });
+
+  return { ok: true };
 }

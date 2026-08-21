@@ -23,6 +23,7 @@ enum OrderStatus {
   ATTEMPTED
   PAID
   EXPIRED
+  CANCELLED
 }
 
 enum PaymentStatus {
@@ -85,6 +86,11 @@ enum AuditActor {
   AI
   MERCHANT
   RAZORPAY
+  // Phase 19 — the end shopper in the AI-buyer flow. Distinct from MERCHANT:
+  // that value means the store owner acting in their own dashboard, and
+  // conflating the two would misattribute who actually cancelled or
+  // authorized a buyer-side purchase.
+  CUSTOMER
 }
 
 enum AuditStatus {

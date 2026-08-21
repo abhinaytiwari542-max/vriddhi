@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 
 import { getDemoMerchant } from "@/lib/demo-merchant";
 import { runBuyerAgentQuery, type BuyerAgentResult } from "@/lib/ai/buyer-agent";
-import { completeBuyerPurchase, type PurchaseCompletionResult } from "@/lib/services/buyer-checkout";
+import {
+  cancelBuyerOrder,
+  completeBuyerPurchase,
+  type CancelResult,
+  type PurchaseCompletionResult,
+} from "@/lib/services/buyer-checkout";
 
 export async function sendBuyerMessage(
   message: string,
@@ -24,12 +29,19 @@ export async function sendBuyerMessage(
 
 export async function authorizePurchaseAction(
   orderId: string,
-  budgetRupees: number
+  budgetRupees: number,
+  simulateFailure = false
 ): Promise<PurchaseCompletionResult> {
-  const result = await completeBuyerPurchase(orderId, budgetRupees);
+  const result = await completeBuyerPurchase(orderId, budgetRupees, { simulateFailure });
   if (result.ok) {
     revalidatePath("/audit");
     revalidatePath("/overview");
   }
+  return result;
+}
+
+export async function cancelOrderAction(orderId: string): Promise<CancelResult> {
+  const result = await cancelBuyerOrder(orderId);
+  if (result.ok) revalidatePath("/audit");
   return result;
 }
