@@ -127,6 +127,18 @@ export async function completeBuyerPurchase(
   });
 
   if (order.status !== "CREATED") {
+    await prisma.auditLog.create({
+      data: {
+        merchantId: order.merchantId,
+        actor: "SYSTEM",
+        action: "duplicate_prevention.buyer_reauthorization_blocked",
+        input: { orderId: order.id },
+        output: { orderStatus: order.status },
+        status: "SUCCESS",
+        relatedEntityType: "Order",
+        relatedEntityId: order.id,
+      },
+    });
     return { ok: false, error: "This order is no longer awaiting authorization.", retryable: false };
   }
 

@@ -95,6 +95,21 @@ export async function executeApprovedCampaign(
   );
   const alreadyDone = campaign.targets.length - pendingTargets.length;
 
+  if (alreadyDone > 0) {
+    await prisma.auditLog.create({
+      data: {
+        merchantId: campaign.merchantId,
+        actor: "SYSTEM",
+        action: "duplicate_prevention.campaign_targets_skipped",
+        input: { campaignId },
+        output: { skippedCount: alreadyDone },
+        status: "SUCCESS",
+        relatedEntityType: "Campaign",
+        relatedEntityId: campaignId,
+      },
+    });
+  }
+
   await prisma.campaign.update({ where: { id: campaignId }, data: { status: "EXECUTING" } });
   await prisma.auditLog.create({
     data: {
