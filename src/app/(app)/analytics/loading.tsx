@@ -1,4 +1,4 @@
-import { MetricGridSkeleton } from "@/components/page-skeleton";
+import { MetricGridSkeleton } from "@/frontend/components/page-skeleton";
 
 export default function Loading() {
   return (

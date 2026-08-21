@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { runTool } from "@/lib/ai/tool-runner";
-import { prisma } from "@/lib/db";
+import { runTool } from "@/backend/lib/ai/tool-runner";
+import { prisma } from "@/backend/lib/db";
 import { createAbandonedOrder, createCustomer, createMerchant, createOpportunity } from "./helpers/fixtures";
 
 describe("runTool — the single chokepoint every tool call passes through", () => {

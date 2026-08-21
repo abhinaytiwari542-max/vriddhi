@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { prisma } from "@/lib/db";
+import { prisma } from "@/backend/lib/db";
 import { createCustomer, createMerchant, createOpportunity } from "./helpers/fixtures";
 
 // The application code (executeApprovedCampaign's skip-already-done filter,

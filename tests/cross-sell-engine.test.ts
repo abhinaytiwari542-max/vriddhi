@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { detectCrossSellOpportunity } from "@/lib/services/cross-sell-engine";
-import { prisma } from "@/lib/db";
+import { detectCrossSellOpportunity } from "@/backend/lib/services/cross-sell-engine";
+import { prisma } from "@/backend/lib/db";
 import { createCustomer, createMerchant, createPaidOrder, createProduct } from "./helpers/fixtures";
 
 // Buys `productIds` together in one paid order, for `count` distinct customers.

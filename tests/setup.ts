@@ -1,6 +1,6 @@
 import { beforeEach } from "vitest";
 
-import { prisma } from "@/lib/db";
+import { prisma } from "@/backend/lib/db";
 
 // Truncate every app table before each test — tests build their own
 // fixtures from scratch, so the test DB is always empty going in. RESTART

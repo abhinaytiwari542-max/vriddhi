@@ -1,4 +1,4 @@
-import { ChatPanel } from "@/components/agent/chat-panel";
+import { ChatPanel } from "@/frontend/components/agent/chat-panel";
 
 export default function AgentPage() {
   return (

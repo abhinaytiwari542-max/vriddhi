@@ -1,12 +1,12 @@
 import { Megaphone } from "lucide-react";
 
-import { getDemoMerchant } from "@/lib/demo-merchant";
-import { prisma } from "@/lib/db";
-import { formatInr } from "@/lib/format";
-import { EmptyState } from "@/components/empty-state";
-import { StatusBadge } from "@/components/status-badge";
-import { ApprovalCard } from "@/components/campaigns/approval-card";
-import { ExecutionCard } from "@/components/campaigns/execution-card";
+import { getDemoMerchant } from "@/backend/lib/demo-merchant";
+import { prisma } from "@/backend/lib/db";
+import { formatInr } from "@/frontend/lib/format";
+import { EmptyState } from "@/frontend/components/empty-state";
+import { StatusBadge } from "@/frontend/components/status-badge";
+import { ApprovalCard } from "@/frontend/components/campaigns/approval-card";
+import { ExecutionCard } from "@/frontend/components/campaigns/execution-card";
 
 export const dynamic = "force-dynamic";
 

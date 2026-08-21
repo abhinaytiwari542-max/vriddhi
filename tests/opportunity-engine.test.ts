@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { detectAbandonedCheckoutOpportunity } from "@/lib/services/opportunity-engine";
-import { prisma } from "@/lib/db";
+import { detectAbandonedCheckoutOpportunity } from "@/backend/lib/services/opportunity-engine";
+import { prisma } from "@/backend/lib/db";
 import { createAbandonedOrder, createCustomer, createMerchant, createPaidOrder, createProduct } from "./helpers/fixtures";
 
 describe("detectAbandonedCheckoutOpportunity — deterministic, no LLM", () => {

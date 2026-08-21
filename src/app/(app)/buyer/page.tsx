@@ -1,4 +1,4 @@
-import { BuyerPanel } from "@/components/buyer/buyer-panel";
+import { BuyerPanel } from "@/frontend/components/buyer/buyer-panel";
 
 export default function BuyerPage() {
   return (

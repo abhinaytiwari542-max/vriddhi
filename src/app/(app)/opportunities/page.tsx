@@ -1,14 +1,14 @@
 import { Sparkles } from "lucide-react";
 
-import { prisma } from "@/lib/db";
-import { getDemoMerchant } from "@/lib/demo-merchant";
-import { detectAbandonedCheckoutOpportunity } from "@/lib/services/opportunity-engine";
-import { getOpportunityNarrative } from "@/lib/services/opportunity-narrative";
-import { evaluatePolicy } from "@/lib/services/policy-engine";
-import { detectCrossSellOpportunity } from "@/lib/services/cross-sell-engine";
-import { EmptyState } from "@/components/empty-state";
-import { OpportunityCard } from "@/components/opportunities/opportunity-card";
-import { CrossSellCard } from "@/components/opportunities/cross-sell-card";
+import { prisma } from "@/backend/lib/db";
+import { getDemoMerchant } from "@/backend/lib/demo-merchant";
+import { detectAbandonedCheckoutOpportunity } from "@/backend/lib/services/opportunity-engine";
+import { getOpportunityNarrative } from "@/backend/lib/services/opportunity-narrative";
+import { evaluatePolicy } from "@/backend/lib/services/policy-engine";
+import { detectCrossSellOpportunity } from "@/backend/lib/services/cross-sell-engine";
+import { EmptyState } from "@/frontend/components/empty-state";
+import { OpportunityCard } from "@/frontend/components/opportunities/opportunity-card";
+import { CrossSellCard } from "@/frontend/components/opportunities/cross-sell-card";
 
 // Opportunity detection must re-run on every request, not be cached as
 // static HTML at build time.

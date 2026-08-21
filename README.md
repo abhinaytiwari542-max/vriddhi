@@ -30,6 +30,46 @@ for what's actually verified vs. what isn't.
   as a single demo merchant (`getDemoMerchant()`) rather than a
   session-derived one — a deliberate MVP scope call, not an oversight.
 
+## Project structure
+
+This is **one Next.js app, one deployment** — not a separate frontend and
+backend service. That was a deliberate Phase 0 decision (see project
+decisions), and it's also just how Next.js's App Router works: pages,
+layouts, API routes, and server actions are designed to live together.
+That said, the code inside `src/` is organized so it *reads* as
+frontend vs. backend:
+
+```
+src/
+  app/                  Next.js routing only — must stay exactly here,
+                        it's how the framework maps files to URLs.
+                        Contains both page.tsx (rendering) and
+                        api/**/route.ts (real API endpoints) — Next.js
+                        doesn't let those be separated.
+  frontend/
+    components/         All React UI components
+    lib/                Browser-safe utilities (class-name merging,
+                        currency formatting, marketing copy) — nothing
+                        here touches the database.
+  backend/
+    lib/
+      db.ts              Prisma client
+      services/          Business logic — policy engine, approval engine,
+                         campaign execution, opportunity/cross-sell
+                         detection, analytics
+      ai/                Gemini client, the agent tool-calling loop,
+                         tool definitions
+      razorpay/           Gateway interface + real/simulated clients
+    actions/             Server actions (the mutation layer pages call
+                        into) — moved out of app/ since Next.js Server
+                        Actions don't need to live next to their page
+  generated/prisma/      Auto-generated Prisma client (gitignored)
+```
+
+`src/app/api/*/route.ts` is the one place backend code is unavoidably
+nested inside `app/` — Next.js's file-based routing requires API routes
+to live at their URL path, there's no way to relocate them.
+
 ## Stack
 
 Next.js 16 (App Router, TypeScript, Turbopack) · Tailwind CSS v4 +

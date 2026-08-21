@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { approveCampaign, modifyCampaign, rejectCampaign } from "@/lib/services/approval-engine";
-import { prisma } from "@/lib/db";
+import { approveCampaign, modifyCampaign, rejectCampaign } from "@/backend/lib/services/approval-engine";
+import { prisma } from "@/backend/lib/db";
 import { createCustomer, createMerchant, createOpportunity } from "./helpers/fixtures";
 
 async function draftCampaign(merchantId: string, opportunityId: string, customerIds: string[]) {

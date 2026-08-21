@@ -1,8 +1,8 @@
 import Link from "next/link";
 
-import { prisma } from "@/lib/db";
-import { AgentShowcase } from "@/components/marketing/agent-showcase";
-import { StatusBadge } from "@/components/status-badge";
+import { prisma } from "@/backend/lib/db";
+import { AgentShowcase } from "@/frontend/components/marketing/agent-showcase";
+import { StatusBadge } from "@/frontend/components/status-badge";
 
 // The footer status pill checks the DB on every request — never cache this
 // page as static HTML with a stale health reading.

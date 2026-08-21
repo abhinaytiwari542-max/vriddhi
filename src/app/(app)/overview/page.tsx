@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { ArrowRight, Database, IndianRupee, Percent, Receipt, Sparkles, Wallet } from "lucide-react";
 
-import { prisma } from "@/lib/db";
-import { getDemoMerchant } from "@/lib/demo-merchant";
-import { detectAbandonedCheckoutOpportunity, formatInr } from "@/lib/services/opportunity-engine";
-import { MetricTile } from "@/components/dashboard/metric-tile";
-import { EmptyState } from "@/components/empty-state";
-import { StatusBadge } from "@/components/status-badge";
+import { prisma } from "@/backend/lib/db";
+import { getDemoMerchant } from "@/backend/lib/demo-merchant";
+import { detectAbandonedCheckoutOpportunity, formatInr } from "@/backend/lib/services/opportunity-engine";
+import { MetricTile } from "@/frontend/components/dashboard/metric-tile";
+import { EmptyState } from "@/frontend/components/empty-state";
+import { StatusBadge } from "@/frontend/components/status-badge";
 
 // Dashboard numbers and opportunity detection must be recomputed on every
 // request, not cached as static HTML at build time.

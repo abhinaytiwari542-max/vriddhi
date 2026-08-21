@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { prisma } from "@/backend/lib/db";
 
 /** A merchant + owner user + a permissive default policy — the minimum
  * every test needs before it can exercise any service. */

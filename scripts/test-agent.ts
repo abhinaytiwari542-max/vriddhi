@@ -1,7 +1,7 @@
 import "dotenv/config";
 
-import { prisma } from "@/lib/db";
-import { runAgentQuery } from "@/lib/ai/agent";
+import { prisma } from "@/backend/lib/db";
+import { runAgentQuery } from "@/backend/lib/ai/agent";
 
 // ---------------------------------------------------------------------------
 // Manual smoke test for the Phase 9 agent tool system. Not part of the app —

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { evaluatePolicy } from "@/lib/services/policy-engine";
-import { prisma } from "@/lib/db";
+import { evaluatePolicy } from "@/backend/lib/services/policy-engine";
+import { prisma } from "@/backend/lib/db";
 import { createMerchant } from "./helpers/fixtures";
 
 describe("evaluatePolicy — deterministic guardrail, no LLM involved", () => {

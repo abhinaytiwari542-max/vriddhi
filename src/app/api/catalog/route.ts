@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { listCatalogProducts } from "@/lib/services/catalog";
+import { listCatalogProducts } from "@/backend/lib/services/catalog";
 
 // Deliberately public, unlike every other route in this app — this is the
 // one API meant to be called by an external AI buyer (Phase 18), not by

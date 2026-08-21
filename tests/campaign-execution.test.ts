@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { executeApprovedCampaign } from "@/lib/services/campaign-execution";
-import { prisma } from "@/lib/db";
+import { executeApprovedCampaign } from "@/backend/lib/services/campaign-execution";
+import { prisma } from "@/backend/lib/db";
 import { createCustomer, createMerchant, createOpportunity } from "./helpers/fixtures";
 
 async function approvedCampaign(merchantId: string, targetCount: number) {

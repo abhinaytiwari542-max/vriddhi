@@ -1,10 +1,10 @@
 import { ScrollText } from "lucide-react";
 
-import { prisma } from "@/lib/db";
-import { getDemoMerchant } from "@/lib/demo-merchant";
-import { auditActionLabel } from "@/lib/audit-labels";
-import { EmptyState } from "@/components/empty-state";
-import { StatusBadge } from "@/components/status-badge";
+import { prisma } from "@/backend/lib/db";
+import { getDemoMerchant } from "@/backend/lib/demo-merchant";
+import { auditActionLabel } from "@/backend/lib/audit-labels";
+import { EmptyState } from "@/frontend/components/empty-state";
+import { StatusBadge } from "@/frontend/components/status-badge";
 
 export const dynamic = "force-dynamic";
 

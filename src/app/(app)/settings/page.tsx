@@ -1,7 +1,7 @@
-import { getDemoMerchant } from "@/lib/demo-merchant";
-import { getOrCreatePolicy } from "@/lib/services/policy-engine";
-import { PolicyForm } from "@/components/settings/policy-form";
-import { EmptyState } from "@/components/empty-state";
+import { getDemoMerchant } from "@/backend/lib/demo-merchant";
+import { getOrCreatePolicy } from "@/backend/lib/services/policy-engine";
+import { PolicyForm } from "@/frontend/components/settings/policy-form";
+import { EmptyState } from "@/frontend/components/empty-state";
 import { Settings as SettingsIcon } from "lucide-react";
 
 export const dynamic = "force-dynamic";

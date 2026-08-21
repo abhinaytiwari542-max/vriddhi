@@ -16,12 +16,12 @@ import {
   Wrench,
 } from "lucide-react";
 
-import { getDemoMerchant } from "@/lib/demo-merchant";
-import { getAnalyticsSnapshot } from "@/lib/services/analytics";
-import { formatInr } from "@/lib/format";
-import { MetricTile } from "@/components/dashboard/metric-tile";
-import { EmptyState } from "@/components/empty-state";
-import { Card } from "@/components/ui/card";
+import { getDemoMerchant } from "@/backend/lib/demo-merchant";
+import { getAnalyticsSnapshot } from "@/backend/lib/services/analytics";
+import { formatInr } from "@/frontend/lib/format";
+import { MetricTile } from "@/frontend/components/dashboard/metric-tile";
+import { EmptyState } from "@/frontend/components/empty-state";
+import { Card } from "@/frontend/components/ui/card";
 
 export const dynamic = "force-dynamic";
 

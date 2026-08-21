@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { cancelBuyerOrder, completeBuyerPurchase, proposePurchase } from "@/lib/services/buyer-checkout";
-import { prisma } from "@/lib/db";
+import { cancelBuyerOrder, completeBuyerPurchase, proposePurchase } from "@/backend/lib/services/buyer-checkout";
+import { prisma } from "@/backend/lib/db";
 import { createMerchant, createProduct } from "./helpers/fixtures";
 
 describe("buyer-checkout — the AI buyer's guardrails (simulated gateway)", () => {

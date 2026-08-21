@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getCatalogProduct } from "@/lib/services/catalog";
+import { getCatalogProduct } from "@/backend/lib/services/catalog";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
