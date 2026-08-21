@@ -1,17 +1,15 @@
 import { prisma } from "@/backend/lib/db";
 
 // ---------------------------------------------------------------------------
-// Phase 20 — Analytics.
-//
-// Every number here is computed from rows already written by Phases 6-19 —
-// no new instrumentation, no fabricated data. Two metrics (incremental GMV,
-// recovery rate) require knowing whether a customer actually paid a
-// recovery payment link, and nothing in this test-mode environment has ever
-// simulated that customer-side action (Phase 12/14 only got as far as
-// "link created"). Rather than approximate those, this service reports them
-// as `measured: false` with an explanation — the same Designed vs Measured
-// distinction the product's own success-metrics framework (Phase 0)
-// commits to.
+// Phase 20 — Analytics. Phase 26 closed the gap this comment used to
+// describe: incremental GMV and recovery rate needed a CampaignTarget to
+// reach PAID, which required a real customer action nothing simulated
+// until the Phase 26 webhook + "simulate customer payment" pipeline
+// existed. Now that PAID is a real, reachable status (via a genuinely
+// signature-verified webhook, not a shortcut), these compute for real
+// once at least one target has actually been paid — and still honestly
+// report `measured: false` before that, rather than showing a zero that
+// could be mistaken for "measured, and it's zero."
 // ---------------------------------------------------------------------------
 
 type Measured<T> = { measured: true; value: T } | { measured: false; reason: string };
@@ -77,6 +75,8 @@ export async function getAnalyticsSnapshot(merchantId: string): Promise<Analytic
     duplicateBuyerCount,
     campaignsWithCreatedTargets,
     openAbandonedOpportunity,
+    paidTargetsAggregate,
+    sentTargetsCount,
   ] = await Promise.all([
     prisma.order.count({ where: { merchantId } }),
     prisma.order.count({ where: { merchantId, status: "PAID" } }),
@@ -122,6 +122,14 @@ export async function getAnalyticsSnapshot(merchantId: string): Promise<Analytic
       where: { merchantId, type: "ABANDONED_CHECKOUT", status: "OPEN" },
       select: { impactMin: true, impactMax: true },
     }),
+    prisma.campaignTarget.aggregate({
+      where: { campaign: { merchantId }, status: "PAID" },
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.campaignTarget.count({
+      where: { campaign: { merchantId }, status: { in: ["LINK_CREATED", "PAID"] } },
+    }),
   ]);
 
   const gmv = paidAggregate._sum.amount ?? 0;
@@ -153,6 +161,33 @@ export async function getAnalyticsSnapshot(merchantId: string): Promise<Analytic
     0
   );
 
+  const paidTargetCount = paidTargetsAggregate._count;
+  const incrementalGmvPaise = paidTargetsAggregate._sum.amount ?? 0;
+
+  const incrementalGmv: Measured<number> =
+    paidTargetCount > 0
+      ? { measured: true, value: incrementalGmvPaise }
+      : {
+          measured: false,
+          reason:
+            "No customer has completed payment on a recovery link yet. Use \"Simulate customer payment\" on a completed campaign's payment links (Campaigns page) to generate this via a real, signature-verified webhook.",
+        };
+
+  const recoveryRate: Measured<number> =
+    sentTargetsCount > 0
+      ? { measured: true, value: (paidTargetCount / sentTargetsCount) * 100 }
+      : { measured: false, reason: "No payment links have been sent yet." };
+
+  const roi: Measured<number> =
+    incrementalGmv.measured && campaignCost > 0
+      ? { measured: true, value: (incrementalGmv.value / campaignCost) * 100 }
+      : {
+          measured: false,
+          reason: !incrementalGmv.measured
+            ? "ROI depends on incremental GMV, which is not yet measurable (see above)."
+            : "No campaign cost has been committed yet, so ROI has no meaningful denominator.",
+        };
+
   return {
     merchant: {
       gmv,
@@ -179,20 +214,9 @@ export async function getAnalyticsSnapshot(merchantId: string): Promise<Analytic
     },
     businessImpact: {
       campaignCost,
-      incrementalGmv: {
-        measured: false,
-        reason:
-          "No customer has completed payment on a recovery link in this test-mode environment — that requires a real customer action nothing here simulates.",
-      },
-      recoveryRate: {
-        measured: false,
-        reason:
-          "Same limitation as incremental GMV: recovery rate needs a CampaignTarget to reach PAID, which only happens if a real customer pays the link.",
-      },
-      roi: {
-        measured: false,
-        reason: "ROI depends on incremental GMV, which is not yet measurable (see above).",
-      },
+      incrementalGmv,
+      recoveryRate,
+      roi,
       designedRecoveryEstimate: openAbandonedOpportunity
         ? { impactMin: openAbandonedOpportunity.impactMin, impactMax: openAbandonedOpportunity.impactMax }
         : null,

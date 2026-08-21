@@ -44,6 +44,7 @@ that just shows a chart and leaves the work to them.
 | Live deployment (Vercel + Neon) | 23 | Shipped |
 | Red-team suite (structural attacks + live jailbreak-prompt run) | 25 | Shipped, 7 additional tests, see `docs/RED-TEAM-REPORT.md` |
 | Check-before-create gateway hardening | 25 | Shipped |
+| Real signature-verified Razorpay webhook + reconciliation | 26 | Shipped, closes the "not yet measured" gap on Incremental GMV/Recovery Rate/ROI — see `docs/PHASE-26-WEBHOOK.md` |
 
 ## 4. What it explicitly does NOT do
 
@@ -84,7 +85,7 @@ actually in:
   live from Postgres, verified against direct SQL queries at Phase 20/21,
   not asserted from return values alone.
 - **Measured, about the guardrails themselves (the actual differentiator):**
-  45 automated tests confirm the policy engine, approval workflow,
+  52 automated tests confirm the policy engine, approval workflow,
   execution idempotency, and duplicate-prevention logic hold under
   adversarial and failure conditions — see `docs/PHASE-21-TESTING.md` and
   `docs/RED-TEAM-REPORT.md`.

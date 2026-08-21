@@ -28,6 +28,7 @@ vs. proposed. Other docs, in the order you'd probably want them:
 | [`docs/FAILURE-HANDLING-DEMO.md`](docs/FAILURE-HANDLING-DEMO.md) | How to reproduce the halt/reconcile/retry demo live |
 | [`docs/PHASE-21-TESTING.md`](docs/PHASE-21-TESTING.md) | What the original 37 automated tests cover, and what they explicitly don't |
 | [`docs/RED-TEAM-REPORT.md`](docs/RED-TEAM-REPORT.md) | Structural attack tests plus a real live-prompt jailbreak run against the model itself |
+| [`docs/PHASE-26-WEBHOOK.md`](docs/PHASE-26-WEBHOOK.md) | The real, signature-verified webhook that turns "not yet measured" into real Incremental GMV/Recovery Rate |
 | [`docs/PORTFOLIO-MATERIALS.md`](docs/PORTFOLIO-MATERIALS.md) | Short description, resume bullets, interview narrative |
 
 ## What's real here, and what's deliberately simulated
@@ -35,8 +36,10 @@ vs. proposed. Other docs, in the order you'd probably want them:
 - **Real**: the Postgres data model, the policy/guardrail engine, the
   approval workflow, the audit trail, halt-and-retry failure handling
   with idempotent execution, the cross-sell basket analysis, the Gemini
-  AI narration layer, and 45 automated tests covering all of the above
-  (37 from the original suite, plus a red-team suite added at Phase 25).
+  AI narration layer, and 52 automated tests covering all of the above
+  (37 from the original suite, 8 added at Phase 25 — a check-before-create
+  hardening test plus a 7-test red-team suite — and 7 from Phase 26's real
+  signature-verified webhook pipeline).
 - **Simulated, by explicit design choice**: Razorpay payment links. There
   was no Razorpay test-mode account available while building this (needs
   business/GST details), so a `SimulatedRazorpayGateway` mimics the real

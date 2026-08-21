@@ -180,17 +180,39 @@ export default async function AnalyticsPage() {
                 icon={Wallet}
                 hint="Discount value on created payment links"
               />
-              <NotMeasuredTile
-                label="Incremental GMV"
-                icon={TrendingUp}
-                reason={notMeasuredReason(businessImpact.incrementalGmv)}
-              />
-              <NotMeasuredTile
-                label="Recovery rate"
-                icon={Percent}
-                reason={notMeasuredReason(businessImpact.recoveryRate)}
-              />
-              <NotMeasuredTile label="ROI" icon={BarChart3} reason={notMeasuredReason(businessImpact.roi)} />
+              {businessImpact.incrementalGmv.measured ? (
+                <MetricTile
+                  label="Incremental GMV"
+                  value={formatInr(businessImpact.incrementalGmv.value)}
+                  icon={TrendingUp}
+                  hint="Paid via a recovery link, confirmed by webhook"
+                />
+              ) : (
+                <NotMeasuredTile
+                  label="Incremental GMV"
+                  icon={TrendingUp}
+                  reason={notMeasuredReason(businessImpact.incrementalGmv)}
+                />
+              )}
+              {businessImpact.recoveryRate.measured ? (
+                <MetricTile
+                  label="Recovery rate"
+                  value={pct(businessImpact.recoveryRate.value)}
+                  icon={Percent}
+                  hint="Paid ÷ links sent"
+                />
+              ) : (
+                <NotMeasuredTile
+                  label="Recovery rate"
+                  icon={Percent}
+                  reason={notMeasuredReason(businessImpact.recoveryRate)}
+                />
+              )}
+              {businessImpact.roi.measured ? (
+                <MetricTile label="ROI" value={pct(businessImpact.roi.value)} icon={BarChart3} hint="Incremental GMV ÷ campaign cost" />
+              ) : (
+                <NotMeasuredTile label="ROI" icon={BarChart3} reason={notMeasuredReason(businessImpact.roi)} />
+              )}
             </div>
             {businessImpact.designedRecoveryEstimate && (
               <p className="text-xs text-muted-foreground">

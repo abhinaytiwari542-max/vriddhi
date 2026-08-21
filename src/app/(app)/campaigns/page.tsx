@@ -7,6 +7,7 @@ import { EmptyState } from "@/frontend/components/empty-state";
 import { StatusBadge } from "@/frontend/components/status-badge";
 import { ApprovalCard } from "@/frontend/components/campaigns/approval-card";
 import { ExecutionCard } from "@/frontend/components/campaigns/execution-card";
+import { SimulatePaymentButton } from "@/frontend/components/campaigns/simulate-payment-button";
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +153,13 @@ export default async function CampaignsPage() {
                               <tr key={t.id} className="border-t border-border">
                                 <td className="px-3 py-2 text-foreground">{t.customer.name}</td>
                                 <td className="px-3 py-2 text-foreground">{formatInr(t.amount)}</td>
-                                <td className="px-3 py-2 text-muted-foreground">{t.status}</td>
+                                <td className="px-3 py-2 text-muted-foreground">
+                                  {t.status === "LINK_CREATED" ? (
+                                    <SimulatePaymentButton campaignTargetId={t.id} />
+                                  ) : (
+                                    t.status
+                                  )}
+                                </td>
                                 <td className="px-3 py-2 font-mono text-muted-foreground">
                                   {t.razorpayPaymentLinkId}
                                 </td>
