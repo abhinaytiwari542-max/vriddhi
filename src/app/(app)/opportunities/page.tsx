@@ -1,8 +1,16 @@
 import { Sparkles } from "lucide-react";
 
+import { getDemoMerchant } from "@/lib/demo-merchant";
+import { detectAbandonedCheckoutOpportunity } from "@/lib/services/opportunity-engine";
 import { EmptyState } from "@/components/empty-state";
+import { OpportunityCard } from "@/components/opportunities/opportunity-card";
 
-export default function OpportunitiesPage() {
+export default async function OpportunitiesPage() {
+  const merchant = await getDemoMerchant();
+  const result = merchant
+    ? await detectAbandonedCheckoutOpportunity(merchant.id)
+    : { detected: false as const };
+
   return (
     <div className="space-y-8">
       <div>
@@ -10,16 +18,21 @@ export default function OpportunitiesPage() {
           Opportunities
         </h1>
         <p className="text-sm text-muted-foreground">
-          Revenue signals detected in your Razorpay data, with AI-generated
-          evidence and recommendations.
+          Revenue signals detected in your order data, with evidence and a
+          recommended action.
         </p>
       </div>
-      <EmptyState
-        tone="ai"
-        icon={Sparkles}
-        title="Opportunity engine ships in Phase 7"
-        description="Abandoned-checkout detection is next on the roadmap — this page will list detected opportunities ranked by estimated impact."
-      />
+
+      {result.detected ? (
+        <OpportunityCard result={result} />
+      ) : (
+        <EmptyState
+          tone="ai"
+          icon={Sparkles}
+          title="No opportunities detected"
+          description="No abandoned checkouts found in your order history right now — run the seed script (Phase 6) to generate demo data, or check back after your next sync."
+        />
+      )}
     </div>
   );
 }
