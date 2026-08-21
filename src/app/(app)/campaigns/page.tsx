@@ -1,4 +1,4 @@
-import { Megaphone } from "lucide-react";
+import { CheckCircle2, IndianRupee, Link2, Megaphone } from "lucide-react";
 
 import { getDemoMerchant } from "@/backend/lib/demo-merchant";
 import { prisma } from "@/backend/lib/db";
@@ -8,6 +8,7 @@ import { StatusBadge } from "@/frontend/components/status-badge";
 import { ApprovalCard } from "@/frontend/components/campaigns/approval-card";
 import { ExecutionCard } from "@/frontend/components/campaigns/execution-card";
 import { SimulatePaymentButton } from "@/frontend/components/campaigns/simulate-payment-button";
+import { MetricTile } from "@/frontend/components/dashboard/metric-tile";
 
 export const dynamic = "force-dynamic";
 
@@ -41,14 +42,55 @@ export default async function CampaignsPage() {
     (c) => !["DRAFT", "APPROVED", "HALTED", "EXECUTING"].includes(c.status)
   );
 
+  const allTargets = campaigns.flatMap((c) => c.targets);
+  const linksCreated = allTargets.filter(
+    (t) => t.status === "LINK_CREATED" || t.status === "PAID"
+  ).length;
+  const paid = allTargets.filter((t) => t.status === "PAID");
+  const collected = paid.reduce((sum, t) => sum + t.amount, 0);
+
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Campaigns</h1>
-        <p className="text-sm text-muted-foreground">
-          Drafted, approved, executed, and rejected recovery actions.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Campaigns</h1>
+          <p className="text-sm text-muted-foreground">
+            Every recovery action, from proposal through to the money landing.
+          </p>
+        </div>
+        <StatusBadge variant={isSimulated ? "pending" : "success"}>
+          {isSimulated ? "Simulated gateway" : "Razorpay test mode"}
+        </StatusBadge>
       </div>
+
+      {campaigns.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <MetricTile
+            label="Campaigns"
+            value={String(campaigns.length)}
+            icon={Megaphone}
+            hint="Drafted, run, or rejected"
+          />
+          <MetricTile
+            label="Links created"
+            value={String(linksCreated)}
+            icon={Link2}
+            hint="One Razorpay link per customer"
+          />
+          <MetricTile
+            label="Customers paid"
+            value={String(paid.length)}
+            icon={CheckCircle2}
+            hint="Confirmed by signed webhook"
+          />
+          <MetricTile
+            label="Recovered"
+            value={formatInr(collected)}
+            icon={IndianRupee}
+            hint="Cash back from stalled carts"
+          />
+        </div>
+      )}
 
       {drafts.length === 0 && actionable.length === 0 && history.length === 0 && (
         <EmptyState
@@ -60,7 +102,10 @@ export default async function CampaignsPage() {
 
       {drafts.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-sm font-medium text-foreground">Awaiting your approval</h2>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Awaiting your approval</h2>
+            <p className="text-xs text-muted-foreground">Nothing sends until you approve</p>
+          </div>
           {drafts.map((c) => (
             <ApprovalCard
               key={c.id}
@@ -78,9 +123,10 @@ export default async function CampaignsPage() {
 
       {actionable.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-sm font-medium text-foreground">
-            Approved and executing — ready or needs attention
-          </h2>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Ready to execute</h2>
+            <p className="text-xs text-muted-foreground">Approved, waiting to send links</p>
+          </div>
           {actionable.map((c) => {
             const createdCount = c.targets.filter(
               (t) => t.status === "LINK_CREATED" || t.status === "PAID"
@@ -106,7 +152,10 @@ export default async function CampaignsPage() {
 
       {history.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-sm font-medium text-foreground">History</h2>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">History</h2>
+            <p className="text-xs text-muted-foreground">Finished and rejected campaigns</p>
+          </div>
           <div className="space-y-3">
             {history.map((c) => {
               const latestApproval = c.approvals[0];

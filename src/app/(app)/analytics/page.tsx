@@ -67,7 +67,7 @@ export default async function AnalyticsPage() {
         <EmptyState
           icon={BarChart3}
           title="No merchant found"
-          description="Seed the database (Phase 6) to see analytics here."
+          description="Run the seed script (npm run db:seed) to populate analytics."
         />
       </div>
     );
@@ -84,11 +84,11 @@ export default async function AnalyticsPage() {
         <EmptyState
           icon={BarChart3}
           title="No orders yet"
-          description="Run the seed script (Phase 6) to populate merchant, AI, and financial-safety analytics."
+          description="Run the seed script (npm run db:seed) to populate these metrics."
         />
       ) : (
         <>
-          <Section title="Merchant" description="Real revenue and order metrics — from the Order/Payment tables directly.">
+          <Section title="Merchant" description="Revenue straight from your orders">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <MetricTile label="GMV" value={formatInr(m.gmv)} icon={IndianRupee} hint="Captured, test mode" />
               <MetricTile label="Total orders" value={String(m.totalOrders)} icon={Receipt} />
@@ -100,7 +100,7 @@ export default async function AnalyticsPage() {
 
           <Section
             title="AI agent"
-            description="How the growth agent's own recommendations performed — opportunity detection through to execution."
+            description="How the agent's suggestions performed"
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <MetricTile label="Opportunities detected" value={String(ai.opportunitiesDetected)} icon={Sparkles} />
@@ -136,7 +136,7 @@ export default async function AnalyticsPage() {
 
           <Section
             title="Financial safety"
-            description="Every attempt to move money, and what the guardrails did with it — read straight off the audit trail."
+            description="What the guardrails allowed or stopped"
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <MetricTile
@@ -171,7 +171,7 @@ export default async function AnalyticsPage() {
 
           <Section
             title="Business impact"
-            description="What the recovered revenue is actually worth — labeled honestly where the underlying customer action hasn't happened yet in this test environment."
+            description="What the recovery was actually worth"
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <MetricTile
@@ -234,7 +234,8 @@ function PageHeader() {
     <div>
       <h1 className="text-3xl font-bold tracking-tight text-foreground">Analytics</h1>
       <p className="text-sm text-muted-foreground">
-        Real numbers pulled from the database — nothing here is projected or simulated unless labeled as such.
+        Every figure is computed from your real records. Anything not yet observable is labeled
+        rather than estimated.
       </p>
     </div>
   );

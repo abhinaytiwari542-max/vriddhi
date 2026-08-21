@@ -74,7 +74,9 @@ export function BuyerPanel() {
           last.error =
             result.reason === "no_api_key"
               ? "AI buyer disabled — add GEMINI_API_KEY to enable it."
-              : "The Gemini API call failed. Try again in a moment.";
+              : result.reason === "quota_exhausted"
+                ? "Today's free-tier AI quota is used up, so the shopper agent can't browse right now. This demo needs the AI; the merchant-side guardrails don't."
+                : "The Gemini API call failed. Try again in a moment.";
           last.trace = result.trace;
           last.proposal = extractProposal(result.trace);
         }

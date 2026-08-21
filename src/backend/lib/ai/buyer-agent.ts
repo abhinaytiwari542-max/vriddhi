@@ -7,7 +7,7 @@ import {
   type FunctionDeclaration,
 } from "@google/genai";
 
-import { callGemini, hasGeminiKey } from "@/backend/lib/ai/client";
+import { callGemini, hasGeminiKey, isQuotaExhausted } from "@/backend/lib/ai/client";
 import { prisma } from "@/backend/lib/db";
 import { listCatalogProducts } from "@/backend/lib/services/catalog";
 import { proposePurchase } from "@/backend/lib/services/buyer-checkout";
@@ -37,7 +37,7 @@ export type BuyerAgentResult =
   | { ok: true; answer: string; trace: BuyerTraceEntry[]; proposedOrderId?: string }
   | {
       ok: false;
-      reason: "no_api_key" | "api_error" | "max_turns_exceeded";
+      reason: "no_api_key" | "api_error" | "quota_exhausted" | "max_turns_exceeded";
       trace: BuyerTraceEntry[];
       proposedOrderId?: string;
     };
@@ -90,7 +90,11 @@ export async function runBuyerAgentQuery(
       );
     } catch (err) {
       console.error("[runBuyerAgentQuery] Gemini call failed:", err);
-      return { ok: false, reason: "api_error", trace };
+      return {
+        ok: false,
+        reason: isQuotaExhausted(err) ? "quota_exhausted" : "api_error",
+        trace,
+      };
     }
 
     const calls = response.functionCalls;

@@ -21,7 +21,12 @@ function fallbackReasonCopy(reason: "no_api_key" | "invalid_output" | "api_error
     case "invalid_output":
       return "AI explanation unavailable — the model's response didn't validate. Showing the rule-based summary.";
     case "api_error":
-      return "AI explanation unavailable — the Gemini API call failed. Showing the rule-based summary.";
+      // The overwhelmingly common cause here is the free-tier daily quota
+      // running out, and "the API call failed" invites the merchant to
+      // retry something that won't succeed. The important reassurance is
+      // that the numbers below are unaffected — they never came from the
+      // model in the first place.
+      return "Plain-English summary unavailable right now (AI quota). Every number below is unchanged — they come from your data, not the AI.";
   }
 }
 

@@ -26,7 +26,13 @@ const NAV_ITEMS = [
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarNav({
+  gatewayMode,
+  onNavigate,
+}: {
+  gatewayMode: "real" | "simulated";
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
@@ -63,7 +69,9 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         </span>
         <div className="flex flex-col text-xs leading-tight">
           <span className="font-medium text-sidebar-foreground">Demo merchant</span>
-          <span className="text-sidebar-foreground/60">Razorpay test mode</span>
+          <span className="text-sidebar-foreground/60">
+            {gatewayMode === "real" ? "Razorpay test mode" : "Razorpay (simulated)"}
+          </span>
         </div>
       </div>
     </nav>

@@ -65,7 +65,7 @@ export default async function OpportunitiesPage() {
           tone="ai"
           icon={Sparkles}
           title="No opportunities detected"
-          description="No abandoned checkouts found in your order history right now — run the seed script (Phase 6) to generate demo data, or check back after your next sync."
+          description="Nothing recoverable in your current order history. New abandoned checkouts appear here automatically as they age past 30 minutes."
         />
       )}
 

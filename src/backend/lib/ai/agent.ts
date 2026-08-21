@@ -7,7 +7,7 @@ import {
   type FunctionDeclaration,
 } from "@google/genai";
 
-import { callGemini, hasGeminiKey } from "@/backend/lib/ai/client";
+import { callGemini, hasGeminiKey, isQuotaExhausted } from "@/backend/lib/ai/client";
 import { TOOL_REGISTRY } from "@/backend/lib/ai/tools";
 import { runTool } from "@/backend/lib/ai/tool-runner";
 
@@ -47,7 +47,11 @@ export type ChatTurn = { role: "user" | "assistant"; text: string };
 
 export type AgentResult =
   | { ok: true; answer: string; trace: AgentTraceEntry[] }
-  | { ok: false; reason: "no_api_key" | "api_error" | "max_turns_exceeded"; trace: AgentTraceEntry[] };
+  | {
+      ok: false;
+      reason: "no_api_key" | "api_error" | "quota_exhausted" | "max_turns_exceeded";
+      trace: AgentTraceEntry[];
+    };
 
 /**
  * Natural language in, tool calls reasoned about by the model, real data
@@ -87,7 +91,13 @@ export async function runAgentQuery(
       );
     } catch (err) {
       console.error("[runAgentQuery] Gemini call failed:", err);
-      return { ok: false, reason: "api_error", trace };
+      // Distinguish an exhausted free-tier quota (won't clear until reset)
+      // from a genuine fault, so the UI can tell the merchant which it is.
+      return {
+        ok: false,
+        reason: isQuotaExhausted(err) ? "quota_exhausted" : "api_error",
+        trace,
+      };
     }
 
     const calls = response.functionCalls;

@@ -6,14 +6,20 @@ import { Menu, X } from "lucide-react";
 
 import { SidebarNav } from "@/frontend/components/layout/sidebar-nav";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  gatewayMode,
+}: {
+  children: React.ReactNode;
+  gatewayMode: "real" | "simulated";
+}) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
       <aside className="hidden w-60 shrink-0 border-r border-sidebar-border bg-sidebar lg:block">
-        <SidebarNav />
+        <SidebarNav gatewayMode={gatewayMode} />
       </aside>
 
       {/* Mobile top bar */}
@@ -57,7 +63,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <X className="size-5" />
                 </button>
               </div>
-              <SidebarNav onNavigate={() => setMobileNavOpen(false)} />
+              <SidebarNav gatewayMode={gatewayMode} onNavigate={() => setMobileNavOpen(false)} />
             </motion.div>
           </>
         )}

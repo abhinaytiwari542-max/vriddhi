@@ -1,10 +1,11 @@
-import { ScrollText } from "lucide-react";
+import { ScrollText, ShieldCheck, ShieldOff, TriangleAlert } from "lucide-react";
 
 import { prisma } from "@/backend/lib/db";
 import { getDemoMerchant } from "@/backend/lib/demo-merchant";
 import { auditActionLabel } from "@/backend/lib/audit-labels";
 import { EmptyState } from "@/frontend/components/empty-state";
 import { StatusBadge } from "@/frontend/components/status-badge";
+import { MetricTile } from "@/frontend/components/dashboard/metric-tile";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,12 @@ export default async function AuditPage() {
       })
     : [];
 
+  // Counted over the same rows being shown, so the totals and the list can
+  // never disagree with each other.
+  const succeeded = logs.filter((l) => l.status === "SUCCESS").length;
+  const blocked = logs.filter((l) => l.status === "BLOCKED").length;
+  const failed = logs.filter((l) => l.status === "FAILURE").length;
+
   return (
     <div className="space-y-8">
       <div>
@@ -45,6 +52,41 @@ export default async function AuditPage() {
           and attributed. Most recent first.
         </p>
       </div>
+
+      {logs.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <MetricTile
+            label="Events recorded"
+            value={String(logs.length)}
+            icon={ScrollText}
+            hint="Newest 200 shown below"
+          />
+          <MetricTile
+            label="Succeeded"
+            value={String(succeeded)}
+            icon={ShieldCheck}
+            hint="Completed as intended"
+          />
+          <MetricTile
+            label="Blocked by policy"
+            value={String(blocked)}
+            icon={ShieldOff}
+            hint="Stopped before any charge"
+          />
+          <MetricTile
+            label="Failed safely"
+            value={String(failed)}
+            icon={TriangleAlert}
+            hint="Errored with nothing charged"
+          />
+        </div>
+      )}
+
+      {logs.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Click any row to expand its inputs, outputs, and the record it relates to.
+        </p>
+      )}
 
       {logs.length === 0 ? (
         <EmptyState

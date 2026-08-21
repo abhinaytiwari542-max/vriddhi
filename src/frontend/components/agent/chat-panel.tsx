@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ArrowRight, Bot, Send, User, Wrench } from "lucide-react";
 
 import { StatusBadge } from "@/frontend/components/status-badge";
@@ -21,12 +21,16 @@ const SUGGESTED_PROMPTS = [
   "How many customers do I have?",
 ];
 
-function reasonCopy(reason: "no_api_key" | "api_error" | "max_turns_exceeded") {
+function reasonCopy(
+  reason: "no_api_key" | "api_error" | "quota_exhausted" | "max_turns_exceeded"
+) {
   switch (reason) {
     case "no_api_key":
       return "Agent chat is disabled — add GEMINI_API_KEY to enable it.";
     case "api_error":
       return "The Gemini API call failed. Try again in a moment.";
+    case "quota_exhausted":
+      return "The free-tier AI quota for today is used up, so chat can't answer right now. Everything else on this dashboard is unaffected — detection, policy checks, approvals, payment links, and analytics are all deterministic and never call the AI.";
     case "max_turns_exceeded":
       return "This question needed more tool calls than allowed and was stopped for safety.";
   }
@@ -136,12 +140,7 @@ export function ChatPanel() {
           </div>
         ))}
 
-        {pending && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Bot className="size-4 text-ai" />
-            Thinking…
-          </div>
-        )}
+        {pending && <ThinkingIndicator />}
       </div>
 
       <div className="flex gap-2 border-t border-border p-3">
@@ -163,6 +162,55 @@ export function ChatPanel() {
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * A static "Thinking…" made a slow answer look like a hung button — the
+ * agent's tool loop can genuinely take tens of seconds, and with the free
+ * tier's quota nearly spent it can take longer still. Showing elapsed
+ * seconds plus a note once it passes 8s tells the merchant it's working
+ * rather than dead, without pretending to know the remaining time.
+ */
+function ThinkingIndicator() {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="flex items-start gap-2">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ai/10 text-ai">
+        <Bot className="size-3.5" />
+      </span>
+      <div className="space-y-1 rounded-2xl bg-muted px-4 py-2">
+        <p className="flex items-center gap-2 text-sm text-foreground">
+          <span className="flex gap-1" aria-hidden>
+            <Dot delay="0ms" />
+            <Dot delay="150ms" />
+            <Dot delay="300ms" />
+          </span>
+          Reading your data
+          <span className="tabular-nums text-xs text-muted-foreground">{seconds}s</span>
+        </p>
+        {seconds >= 8 && (
+          <p className="text-xs text-muted-foreground">
+            Still working — the agent runs one tool at a time and re-checks policy on each step.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Dot({ delay }: { delay: string }) {
+  return (
+    <span
+      className="size-1.5 animate-bounce rounded-full bg-ai"
+      style={{ animationDelay: delay }}
+    />
   );
 }
 
