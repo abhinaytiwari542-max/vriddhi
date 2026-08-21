@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/db";
 import type { RiskLevel } from "@/generated/prisma/client";
+import { formatInr } from "@/lib/format";
+
+export { formatInr };
 
 // ---------------------------------------------------------------------------
 // Abandoned-checkout opportunity detection — Phase 7.
@@ -210,12 +213,4 @@ export async function detectAbandonedCheckoutOpportunity(
     risk,
     evidence,
   };
-}
-
-export function formatInr(paise: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(paise / 100);
 }

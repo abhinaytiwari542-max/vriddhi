@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 
+import { prisma } from "@/lib/db";
 import { getDemoMerchant } from "@/lib/demo-merchant";
 import { detectAbandonedCheckoutOpportunity } from "@/lib/services/opportunity-engine";
 import { getOpportunityNarrative } from "@/lib/services/opportunity-narrative";
@@ -28,6 +29,14 @@ export default async function OpportunitiesPage() {
         })
       : undefined;
 
+  const existingCampaign = result.detected
+    ? await prisma.campaign.findFirst({
+        where: { opportunityId: result.opportunityId },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, status: true },
+      })
+    : null;
+
   return (
     <div className="space-y-8">
       <div>
@@ -41,7 +50,12 @@ export default async function OpportunitiesPage() {
       </div>
 
       {result.detected ? (
-        <OpportunityCard result={result} narrative={narrative} policyCheck={policyCheck} />
+        <OpportunityCard
+          result={result}
+          narrative={narrative}
+          policyCheck={policyCheck}
+          existingCampaign={existingCampaign}
+        />
       ) : (
         <EmptyState
           tone="ai"

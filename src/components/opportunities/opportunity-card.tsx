@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { IndianRupee, TrendingUp, Users } from "lucide-react";
 
 import { formatInr } from "@/lib/services/opportunity-engine";
 import { StatusBadge } from "@/components/status-badge";
+import { DraftCampaignButton } from "@/components/opportunities/draft-campaign-button";
 import type { AbandonedCheckoutResult } from "@/lib/services/opportunity-engine";
 import type { NarrativeResult } from "@/lib/ai/explain-opportunity";
 import type { PolicyCheckResult } from "@/lib/services/policy-engine";
@@ -27,10 +29,12 @@ export function OpportunityCard({
   result,
   narrative,
   policyCheck,
+  existingCampaign,
 }: {
   result: Extract<AbandonedCheckoutResult, { detected: true }>;
   narrative?: NarrativeResult;
   policyCheck?: PolicyCheckResult;
+  existingCampaign?: { id: string; status: string } | null;
 }) {
   return (
     <div className="glow-ai rounded-2xl border border-ai/20 bg-gradient-to-b from-ai/[0.06] to-transparent p-6">
@@ -127,24 +131,28 @@ export function OpportunityCard({
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Within all configured limits — eligible for approval once the Approval Center ships.
+              Within all configured limits — ready to draft for approval.
             </p>
           )}
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          disabled
-          className="cursor-not-allowed rounded-lg border border-border px-4 py-2 text-xs font-medium text-muted-foreground"
-          title={
-            policyCheck?.verdict === "BLOCKED"
-              ? "Blocked by policy — cannot be approved as-is"
-              : "Approval Center ships in Phase 11"
-          }
-        >
-          Review &amp; approve — Phase 11
-        </button>
+      <div className="mt-4">
+        {existingCampaign ? (
+          <div className="flex items-center gap-2">
+            <StatusBadge variant={existingCampaign.status === "APPROVED" ? "success" : "info"}>
+              Campaign {existingCampaign.status.toLowerCase()}
+            </StatusBadge>
+            <Link
+              href="/campaigns"
+              className="text-xs font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              View in Campaigns →
+            </Link>
+          </div>
+        ) : (
+          <DraftCampaignButton opportunityId={result.opportunityId} />
+        )}
       </div>
     </div>
   );
