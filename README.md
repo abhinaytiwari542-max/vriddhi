@@ -9,9 +9,25 @@ action passes through a deterministic policy engine, a human approval
 gate, and a full audit trail — the LLM can suggest, but it can't spend.
 
 Built in 22 sequential phases, each shipped, live-tested, and approved
-before the next started. See `docs/` for the architecture decisions
-behind specific phases, and [`docs/PHASE-21-TESTING.md`](docs/PHASE-21-TESTING.md)
-for what's actually verified vs. what isn't.
+before the next started, plus a redesign and a folder reorg after. See
+`docs/PHASE-*.md` for the decisions behind specific phases.
+
+**Read this first if you're evaluating this as a portfolio piece:**
+[`docs/CASE-STUDY.md`](docs/CASE-STUDY.md) — problem, approach, the real
+tradeoffs made under real constraints, and what's measured vs. designed
+vs. proposed. Other docs, in the order you'd probably want them:
+
+| Doc | What's in it |
+|---|---|
+| [`docs/CASE-STUDY.md`](docs/CASE-STUDY.md) | The full narrative — start here |
+| [`docs/PRD.md`](docs/PRD.md) | What shipped vs. what was planned, and why it changed |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System diagram, the safety-spine design, key technical decisions |
+| [`docs/UX-FLOWS.md`](docs/UX-FLOWS.md) | The actual user flows, with sequence diagrams |
+| [`docs/AI-EVAL-REPORT.md`](docs/AI-EVAL-REPORT.md) | What was actually observed about the LLM's behavior vs. what would need a real eval harness |
+| [`docs/EXPERIMENT-PLAN.md`](docs/EXPERIMENT-PLAN.md) | A proposed (not run) randomized trial to validate the recovery-rate assumption |
+| [`docs/FAILURE-HANDLING-DEMO.md`](docs/FAILURE-HANDLING-DEMO.md) | How to reproduce the halt/reconcile/retry demo live |
+| [`docs/PHASE-21-TESTING.md`](docs/PHASE-21-TESTING.md) | What the 37 automated tests cover, and what they explicitly don't |
+| [`docs/PORTFOLIO-MATERIALS.md`](docs/PORTFOLIO-MATERIALS.md) | Short description, resume bullets, interview narrative |
 
 ## What's real here, and what's deliberately simulated
 
