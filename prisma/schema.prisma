@@ -1,0 +1,356 @@
+// Vriddhi — AI Growth & Agentic Commerce
+// Schema matches the architecture approved in docs/ARCHITECTURE.md (Phase 3).
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  OWNER
+  OPS
+}
+
+enum OrderStatus {
+  CREATED
+  ATTEMPTED
+  PAID
+  EXPIRED
+}
+
+enum PaymentStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+}
+
+enum OpportunityType {
+  ABANDONED_CHECKOUT
+  CROSS_SELL
+}
+
+enum OpportunityStatus {
+  OPEN
+  DISMISSED
+  ACTIONED
+  EXPIRED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum CampaignStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  EXECUTING
+  COMPLETED
+  HALTED
+  FAILED
+}
+
+enum CampaignTargetStatus {
+  PENDING
+  LINK_CREATED
+  PAID
+  FAILED
+}
+
+enum ApprovalDecision {
+  APPROVE
+  MODIFY
+  REJECT
+}
+
+enum AgentActionSource {
+  CHAT
+  SYSTEM
+}
+
+enum AuditActor {
+  SYSTEM
+  AI
+  MERCHANT
+  RAZORPAY
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+  BLOCKED
+}
+
+// ---------- Core tenancy ----------
+
+model Merchant {
+  id                    String   @id @default(cuid())
+  name                  String
+  razorpayKeyId         String?  @map("razorpay_key_id")
+  razorpayKeySecretEnc  String?  @map("razorpay_key_secret_enc")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  users         User[]
+  customers     Customer[]
+  products      Product[]
+  orders        Order[]
+  opportunities Opportunity[]
+  campaigns     Campaign[]
+  agentActions  AgentAction[]
+  policy        Policy?
+  auditLogs     AuditLog[]
+
+  @@map("merchants")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  merchantId   String   @map("merchant_id")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(OWNER)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  merchant   Merchant     @relation(fields: [merchantId], references: [id])
+  approvals  Approval[]
+
+  @@map("users")
+}
+
+// ---------- Commerce data ----------
+
+model Customer {
+  id         String   @id @default(cuid())
+  merchantId String   @map("merchant_id")
+  name       String
+  email      String?
+  phone      String?
+  firstSeenAt DateTime @default(now()) @map("first_seen_at")
+
+  merchant        Merchant         @relation(fields: [merchantId], references: [id])
+  orders          Order[]
+  campaignTargets CampaignTarget[]
+
+  @@index([merchantId])
+  @@map("customers")
+}
+
+model Product {
+  id                String   @id @default(cuid())
+  merchantId        String   @map("merchant_id")
+  name              String
+  price             Int // paise (smallest currency unit), matches Razorpay convention
+  currency          String   @default("INR")
+  available         Boolean  @default(true)
+  variants          Json     @default("[]")
+  deliveryEstimate  String?  @map("delivery_estimate")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id])
+
+  @@index([merchantId])
+  @@map("products")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  merchantId      String      @map("merchant_id")
+  customerId      String      @map("customer_id")
+  razorpayOrderId String?     @unique @map("razorpay_order_id")
+  status          OrderStatus @default(CREATED)
+  amount          Int // paise
+  currency        String      @default("INR")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  merchant        Merchant         @relation(fields: [merchantId], references: [id])
+  customer        Customer         @relation(fields: [customerId], references: [id])
+  payments        Payment[]
+  campaignTargets CampaignTarget[]
+
+  @@index([merchantId, status])
+  @@map("orders")
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String        @map("order_id")
+  razorpayPaymentId String?       @unique @map("razorpay_payment_id")
+  status            PaymentStatus @default(CREATED)
+  amount            Int // paise
+  method            String?
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+// ---------- Intelligence layer ----------
+
+model Opportunity {
+  id                String            @id @default(cuid())
+  merchantId        String            @map("merchant_id")
+  type              OpportunityType
+  status            OpportunityStatus @default(OPEN)
+  title             String
+  explanation       String
+  evidence          Json              @default("[]")
+  impactMin         Int               @map("impact_min") // paise
+  impactMax         Int               @map("impact_max") // paise
+  recommendedAction Json              @map("recommended_action")
+  estimatedCost     Int               @map("estimated_cost") // paise
+  confidence        Float
+  risk              RiskLevel
+  detectedAt        DateTime          @default(now()) @map("detected_at")
+
+  merchant  Merchant   @relation(fields: [merchantId], references: [id])
+  campaigns Campaign[]
+
+  @@index([merchantId, status])
+  @@map("opportunities")
+}
+
+model Campaign {
+  id              String         @id @default(cuid())
+  opportunityId   String         @map("opportunity_id")
+  merchantId      String         @map("merchant_id")
+  status          CampaignStatus @default(DRAFT)
+  discountAmount  Int            @map("discount_amount") // paise
+  audienceFilter  Json           @map("audience_filter")
+  maxCost         Int            @map("max_cost") // paise
+  actualCost      Int            @default(0) @map("actual_cost") // paise
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  opportunity Opportunity      @relation(fields: [opportunityId], references: [id])
+  merchant    Merchant         @relation(fields: [merchantId], references: [id])
+  targets     CampaignTarget[]
+  approvals   Approval[]
+  failures    Failure[]
+
+  @@index([merchantId, status])
+  @@map("campaigns")
+}
+
+model CampaignTarget {
+  id                    String               @id @default(cuid())
+  campaignId            String               @map("campaign_id")
+  customerId            String               @map("customer_id")
+  orderId               String?              @map("order_id")
+  status                CampaignTargetStatus @default(PENDING)
+  razorpayPaymentLinkId String?              @map("razorpay_payment_link_id")
+  idempotencyKey        String               @unique @map("idempotency_key")
+  amount                Int // paise
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+
+  campaign Campaign  @relation(fields: [campaignId], references: [id])
+  customer Customer  @relation(fields: [customerId], references: [id])
+  order    Order?    @relation(fields: [orderId], references: [id])
+  failures Failure[]
+
+  // Duplicate-proof at the database level, not just in application logic —
+  // one target row per (campaign, customer) no matter how many times execution is retried.
+  @@unique([campaignId, customerId])
+  @@map("campaign_targets")
+}
+
+// ---------- Agent + safety spine ----------
+
+model AgentAction {
+  id         String            @id @default(cuid())
+  merchantId String            @map("merchant_id")
+  source     AgentActionSource
+  toolName   String            @map("tool_name")
+  input      Json
+  output     Json?
+  status     String
+  latencyMs  Int?              @map("latency_ms")
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id])
+
+  @@index([merchantId, createdAt])
+  @@map("agent_actions")
+}
+
+model Approval {
+  id             String           @id @default(cuid())
+  campaignId     String           @map("campaign_id")
+  actorUserId    String           @map("actor_user_id")
+  decision       ApprovalDecision
+  previousState  Json             @map("previous_state")
+  approvedState  Json             @map("approved_state")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  campaign  Campaign @relation(fields: [campaignId], references: [id])
+  actorUser User     @relation(fields: [actorUserId], references: [id])
+
+  @@index([campaignId])
+  @@map("approvals")
+}
+
+model Policy {
+  id                    String   @id @default(cuid())
+  merchantId            String   @unique @map("merchant_id")
+  maxCampaignBudget     Int      @map("max_campaign_budget") // paise
+  maxDiscountPercent    Int      @map("max_discount_percent")
+  maxTransactionValue   Int      @map("max_transaction_value") // paise
+  requireApprovalAlways Boolean  @default(true) @map("require_approval_always")
+  autoExecuteEnabled    Boolean  @default(false) @map("auto_execute_enabled")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id])
+
+  @@map("policies")
+}
+
+model AuditLog {
+  id                String      @id @default(cuid())
+  merchantId        String      @map("merchant_id")
+  timestamp         DateTime    @default(now())
+  actor             AuditActor
+  action            String
+  input             Json?
+  output            Json?
+  status            AuditStatus
+  relatedEntityType String?     @map("related_entity_type")
+  relatedEntityId   String?     @map("related_entity_id")
+  error             String?
+
+  merchant Merchant @relation(fields: [merchantId], references: [id])
+
+  @@index([merchantId, timestamp])
+  @@index([relatedEntityType, relatedEntityId])
+  @@map("audit_logs")
+}
+
+model Failure {
+  id                   String    @id @default(cuid())
+  campaignId           String    @map("campaign_id")
+  failedAtTargetId     String?   @map("failed_at_target_id")
+  reason               String
+  detectedAt           DateTime  @default(now()) @map("detected_at")
+  reconciliationResult Json?     @map("reconciliation_result")
+  resolvedAt           DateTime? @map("resolved_at")
+
+  campaign         Campaign        @relation(fields: [campaignId], references: [id])
+  failedAtTarget   CampaignTarget? @relation(fields: [failedAtTargetId], references: [id])
+
+  @@index([campaignId])
+  @@map("failures")
+}
