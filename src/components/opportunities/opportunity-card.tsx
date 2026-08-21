@@ -3,6 +3,7 @@ import { IndianRupee, TrendingUp, Users } from "lucide-react";
 import { formatInr } from "@/lib/services/opportunity-engine";
 import { StatusBadge } from "@/components/status-badge";
 import type { AbandonedCheckoutResult } from "@/lib/services/opportunity-engine";
+import type { NarrativeResult } from "@/lib/ai/explain-opportunity";
 
 const RISK_VARIANT = {
   LOW: "success",
@@ -10,10 +11,23 @@ const RISK_VARIANT = {
   HIGH: "danger",
 } as const;
 
+function fallbackReasonCopy(reason: "no_api_key" | "invalid_output" | "api_error") {
+  switch (reason) {
+    case "no_api_key":
+      return "AI narration disabled — add GEMINI_API_KEY to enable it.";
+    case "invalid_output":
+      return "AI explanation unavailable — the model's response didn't validate. Showing the rule-based summary.";
+    case "api_error":
+      return "AI explanation unavailable — the Gemini API call failed. Showing the rule-based summary.";
+  }
+}
+
 export function OpportunityCard({
   result,
+  narrative,
 }: {
   result: Extract<AbandonedCheckoutResult, { detected: true }>;
+  narrative?: NarrativeResult;
 }) {
   return (
     <div className="glow-ai rounded-2xl border border-ai/20 bg-gradient-to-b from-ai/[0.06] to-transparent p-6">
@@ -22,6 +36,7 @@ export function OpportunityCard({
           Abandoned checkout recovery
         </span>
         <div className="flex items-center gap-2">
+          {narrative?.ok && <StatusBadge variant="ai" pulse>AI explanation</StatusBadge>}
           <StatusBadge variant="ai">Confidence {Math.round(result.confidence * 100)}%</StatusBadge>
           <StatusBadge variant={RISK_VARIANT[result.risk]}>{result.risk} risk</StatusBadge>
         </div>
@@ -30,11 +45,27 @@ export function OpportunityCard({
       <h3 className="mb-2 text-xl font-semibold text-foreground">
         {result.totalAbandonedCount} abandoned checkouts · {formatInr(result.totalAbandonedValue)} stalled
       </h3>
-      <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
-        {result.highIntentCount} customers scored high-intent — a prior purchase, a recent
-        abandonment, or an above-typical cart value. Explanation is currently rule-based;
-        AI narration arrives in Phase 8.
-      </p>
+
+      {narrative?.ok ? (
+        <div className="mb-5 space-y-3 text-sm leading-relaxed">
+          <NarrativeSection label="What happened" text={narrative.narrative.whatHappened} />
+          <NarrativeSection label="Why it matters" text={narrative.narrative.whyItMatters} />
+          <NarrativeSection label="What to do" text={narrative.narrative.recommendedAction} />
+          <NarrativeSection label="If you approve" text={narrative.narrative.ifYouApprove} />
+        </div>
+      ) : (
+        <div className="mb-5 space-y-2">
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {result.highIntentCount} customers scored high-intent — a prior purchase, a recent
+            abandonment, or an above-typical cart value.
+          </p>
+          {narrative && !narrative.ok && (
+            <StatusBadge variant={narrative.reason === "no_api_key" ? "info" : "pending"}>
+              {fallbackReasonCopy(narrative.reason)}
+            </StatusBadge>
+          )}
+        </div>
+      )}
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat icon={Users} label="Audience" value={String(result.highIntentCount)} />
@@ -86,6 +117,15 @@ export function OpportunityCard({
           Review &amp; approve — Phase 11
         </button>
       </div>
+    </div>
+  );
+}
+
+function NarrativeSection({ label, text }: { label: string; text: string }) {
+  return (
+    <div>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <p className="text-foreground">{text}</p>
     </div>
   );
 }

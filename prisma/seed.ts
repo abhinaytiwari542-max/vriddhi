@@ -32,7 +32,9 @@ const FAILED_PAYMENT_ORDERS = 10;
 const ABANDONED_HIGH_INTENT = 18; // existing customers, abandoned within 48h
 const ABANDONED_LOW_INTENT = 25; // new customers or older abandonments
 
-const PRODUCTS = [
+type SeedProduct = { name: string; price: number; variants: string[]; available?: boolean };
+
+const PRODUCTS: SeedProduct[] = [
   { name: "Trailblazer Running Shoes", price: 299900, variants: ["7", "8", "9", "10", "11"] },
   { name: "Urban Sprint Sneakers", price: 349900, variants: ["7", "8", "9", "10"] },
   { name: "CloudStep Walking Shoes", price: 219900, variants: ["6", "7", "8", "9", "10"] },
@@ -47,7 +49,7 @@ const PRODUCTS = [
   { name: "Compression Calf Sleeves", price: 69900, variants: ["S/M", "L/XL"] },
   { name: "All-Terrain Sandals", price: 149900, variants: ["7", "8", "9", "10"], available: false },
   { name: "Limited Edition Racing Flats", price: 549900, variants: ["9", "10"], available: false },
-] as const;
+];
 
 function paise(rupees: number) {
   return Math.round(rupees * 100);

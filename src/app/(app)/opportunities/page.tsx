@@ -2,14 +2,21 @@ import { Sparkles } from "lucide-react";
 
 import { getDemoMerchant } from "@/lib/demo-merchant";
 import { detectAbandonedCheckoutOpportunity } from "@/lib/services/opportunity-engine";
+import { getOpportunityNarrative } from "@/lib/services/opportunity-narrative";
 import { EmptyState } from "@/components/empty-state";
 import { OpportunityCard } from "@/components/opportunities/opportunity-card";
+
+// Opportunity detection must re-run on every request, not be cached as
+// static HTML at build time.
+export const dynamic = "force-dynamic";
 
 export default async function OpportunitiesPage() {
   const merchant = await getDemoMerchant();
   const result = merchant
     ? await detectAbandonedCheckoutOpportunity(merchant.id)
     : { detected: false as const };
+
+  const narrative = result.detected ? await getOpportunityNarrative(result) : undefined;
 
   return (
     <div className="space-y-8">
@@ -18,13 +25,13 @@ export default async function OpportunitiesPage() {
           Opportunities
         </h1>
         <p className="text-sm text-muted-foreground">
-          Revenue signals detected in your order data, with evidence and a
-          recommended action.
+          Revenue signals detected in your order data, explained and
+          recommended.
         </p>
       </div>
 
       {result.detected ? (
-        <OpportunityCard result={result} />
+        <OpportunityCard result={result} narrative={narrative} />
       ) : (
         <EmptyState
           tone="ai"

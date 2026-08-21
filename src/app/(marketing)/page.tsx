@@ -4,6 +4,10 @@ import { prisma } from "@/lib/db";
 import { AgentShowcase } from "@/components/marketing/agent-showcase";
 import { StatusBadge } from "@/components/status-badge";
 
+// The footer status pill checks the DB on every request — never cache this
+// page as static HTML with a stale health reading.
+export const dynamic = "force-dynamic";
+
 export default async function LandingPage() {
   let systemHealthy = false;
   try {

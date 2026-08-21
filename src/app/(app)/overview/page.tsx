@@ -8,6 +8,10 @@ import { MetricTile } from "@/components/dashboard/metric-tile";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 
+// Dashboard numbers and opportunity detection must be recomputed on every
+// request, not cached as static HTML at build time.
+export const dynamic = "force-dynamic";
+
 export default async function OverviewPage() {
   const [merchant, orderCount, paidOrders, paidAggregate] = await Promise.all([
     getDemoMerchant(),

@@ -216,6 +216,13 @@ model Opportunity {
   confidence        Float
   risk              RiskLevel
   detectedAt        DateTime          @default(now()) @map("detected_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  // AI narration cache (Phase 8) — populated by Claude, never the source of
+  // the numeric fields above. aiNarrativeInputHash lets us skip a fresh LLM
+  // call when the underlying detected numbers haven't changed.
+  aiNarrative         Json?   @map("ai_narrative")
+  aiNarrativeInputHash String? @map("ai_narrative_input_hash")
 
   merchant  Merchant   @relation(fields: [merchantId], references: [id])
   campaigns Campaign[]
