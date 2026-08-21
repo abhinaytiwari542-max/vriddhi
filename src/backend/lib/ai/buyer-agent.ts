@@ -7,7 +7,7 @@ import {
   type FunctionDeclaration,
 } from "@google/genai";
 
-import { getGeminiClient } from "@/backend/lib/ai/client";
+import { callGemini, hasGeminiKey } from "@/backend/lib/ai/client";
 import { prisma } from "@/backend/lib/db";
 import { listCatalogProducts } from "@/backend/lib/services/catalog";
 import { proposePurchase } from "@/backend/lib/services/buyer-checkout";
@@ -54,8 +54,7 @@ export async function runBuyerAgentQuery(
   userMessage: string,
   context: { budgetRupees: number; buyerName: string; buyerEmail?: string }
 ): Promise<BuyerAgentResult> {
-  const client = getGeminiClient();
-  if (!client) return { ok: false, reason: "no_api_key", trace: [] };
+  if (!hasGeminiKey()) return { ok: false, reason: "no_api_key", trace: [] };
 
   const trace: BuyerTraceEntry[] = [];
   const contents: Content[] = [createUserContent(userMessage)];
@@ -79,14 +78,16 @@ export async function runBuyerAgentQuery(
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
     let response;
     try {
-      response = await client.models.generateContent({
-        model: BUYER_AGENT_MODEL,
-        contents,
-        config: {
-          systemInstruction: buildSystemInstruction(context.budgetRupees),
-          tools: [{ functionDeclarations }],
-        },
-      });
+      response = await callGemini((client) =>
+        client.models.generateContent({
+          model: BUYER_AGENT_MODEL,
+          contents,
+          config: {
+            systemInstruction: buildSystemInstruction(context.budgetRupees),
+            tools: [{ functionDeclarations }],
+          },
+        })
+      );
     } catch (err) {
       console.error("[runBuyerAgentQuery] Gemini call failed:", err);
       return { ok: false, reason: "api_error", trace };

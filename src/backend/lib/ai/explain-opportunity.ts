@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getGeminiClient, OPPORTUNITY_EXPLANATION_MODEL } from "@/backend/lib/ai/client";
+import { callGemini, hasGeminiKey, OPPORTUNITY_EXPLANATION_MODEL } from "@/backend/lib/ai/client";
 import { OpportunityNarrativeSchema, type OpportunityNarrative } from "@/backend/lib/ai/schemas";
 import { formatInr, type AbandonedCheckoutResult } from "@/backend/lib/services/opportunity-engine";
 
@@ -43,24 +43,25 @@ Respond with four short sections: what happened, why it matters, what to do, and
 export async function explainOpportunity(
   result: Extract<AbandonedCheckoutResult, { detected: true }>
 ): Promise<NarrativeResult> {
-  const client = getGeminiClient();
-  if (!client) return { ok: false, reason: "no_api_key" };
+  if (!hasGeminiKey()) return { ok: false, reason: "no_api_key" };
 
   const prompt = buildPrompt(result);
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const response = await client.models.generateContent({
-        model: OPPORTUNITY_EXPLANATION_MODEL,
-        contents:
-          attempt === 0
-            ? prompt
-            : `${prompt}\n\nYour previous response did not match the required JSON schema. Return ONLY valid JSON matching the schema exactly.`,
-        config: {
-          responseMimeType: "application/json",
-          responseJsonSchema,
-        },
-      });
+      const response = await callGemini((client) =>
+        client.models.generateContent({
+          model: OPPORTUNITY_EXPLANATION_MODEL,
+          contents:
+            attempt === 0
+              ? prompt
+              : `${prompt}\n\nYour previous response did not match the required JSON schema. Return ONLY valid JSON matching the schema exactly.`,
+          config: {
+            responseMimeType: "application/json",
+            responseJsonSchema,
+          },
+        })
+      );
 
       const text = response.text;
       const parsed = text ? OpportunityNarrativeSchema.safeParse(JSON.parse(text)) : null;

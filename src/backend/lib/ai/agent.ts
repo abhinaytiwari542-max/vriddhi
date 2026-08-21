@@ -7,7 +7,7 @@ import {
   type FunctionDeclaration,
 } from "@google/genai";
 
-import { getGeminiClient } from "@/backend/lib/ai/client";
+import { callGemini, hasGeminiKey } from "@/backend/lib/ai/client";
 import { TOOL_REGISTRY } from "@/backend/lib/ai/tools";
 import { runTool } from "@/backend/lib/ai/tool-runner";
 
@@ -61,8 +61,7 @@ export async function runAgentQuery(
   userMessage: string,
   history: ChatTurn[] = []
 ): Promise<AgentResult> {
-  const client = getGeminiClient();
-  if (!client) return { ok: false, reason: "no_api_key", trace: [] };
+  if (!hasGeminiKey()) return { ok: false, reason: "no_api_key", trace: [] };
 
   const trace: AgentTraceEntry[] = [];
   const contents: Content[] = [
@@ -76,14 +75,16 @@ export async function runAgentQuery(
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
     let response;
     try {
-      response = await client.models.generateContent({
-        model: AGENT_MODEL,
-        contents,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          tools: [{ functionDeclarations }],
-        },
-      });
+      response = await callGemini((client) =>
+        client.models.generateContent({
+          model: AGENT_MODEL,
+          contents,
+          config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            tools: [{ functionDeclarations }],
+          },
+        })
+      );
     } catch (err) {
       console.error("[runAgentQuery] Gemini call failed:", err);
       return { ok: false, reason: "api_error", trace };
