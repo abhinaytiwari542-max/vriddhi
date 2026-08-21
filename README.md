@@ -28,6 +28,7 @@ vs. proposed. Other docs, in the order you'd probably want them:
 | [`docs/FAILURE-HANDLING-DEMO.md`](docs/FAILURE-HANDLING-DEMO.md) | How to reproduce the halt/reconcile/retry demo live |
 | [`docs/PHASE-21-TESTING.md`](docs/PHASE-21-TESTING.md) | What the 37 automated tests cover, and what they explicitly don't |
 | [`docs/PORTFOLIO-MATERIALS.md`](docs/PORTFOLIO-MATERIALS.md) | Short description, resume bullets, interview narrative |
+| [`docs/VIDEO-WALKTHROUGH.md`](docs/VIDEO-WALKTHROUGH.md) | Timed script for a 5-minute recorded walkthrough, plus the same content as standalone form answers |
 
 ## What's real here, and what's deliberately simulated
 
