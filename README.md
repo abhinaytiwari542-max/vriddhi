@@ -54,6 +54,27 @@ data.
 | `npm run dev` | Start the Next.js dev server |
 | `npm run build` / `npm start` | Production build / run |
 | `npm run lint` | ESLint |
+| `npm test` | Run the test suite (Vitest) — see below |
 | `npm run db:migrate` | Apply Prisma migrations to your local DB |
 | `npm run db:generate` | Regenerate the Prisma client after a schema change |
 | `npm run db:studio` | Open Prisma Studio (visual DB browser) |
+
+## Running tests
+
+Tests run against a separate `vriddhi_test` database — never `vriddhi_dev` —
+so they can freely truncate tables between runs without touching the demo
+dataset. One-time setup:
+
+```bash
+createdb vriddhi_test
+DATABASE_URL="postgresql://$(whoami)@localhost:5432/vriddhi_test?schema=public" npx prisma migrate deploy
+```
+
+Then:
+
+```bash
+npm test
+```
+
+See [`docs/PHASE-21-TESTING.md`](docs/PHASE-21-TESTING.md) for what's
+covered (and, just as importantly, what's explicitly not).
