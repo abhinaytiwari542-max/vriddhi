@@ -6,6 +6,7 @@ import { detectAbandonedCheckoutOpportunity } from "@/backend/lib/services/oppor
 import { getOpportunityNarrative } from "@/backend/lib/services/opportunity-narrative";
 import { evaluatePolicy } from "@/backend/lib/services/policy-engine";
 import { detectCrossSellOpportunity } from "@/backend/lib/services/cross-sell-engine";
+import { NON_TERMINAL_CAMPAIGN_STATUSES } from "@/backend/lib/ai/tools/propose-tools";
 import { EmptyState } from "@/frontend/components/empty-state";
 import { OpportunityCard } from "@/frontend/components/opportunities/opportunity-card";
 import { CrossSellCard } from "@/frontend/components/opportunities/cross-sell-card";
@@ -31,13 +32,40 @@ export default async function OpportunitiesPage() {
         })
       : undefined;
 
-  const existingCampaign = result.detected
+  // Only a campaign that is still live blocks drafting another. Querying
+  // without the status filter meant a finished campaign hid the draft
+  // button permanently, so a second recovery run on the same opportunity
+  // was impossible from the UI even though create_campaign permits it.
+  const activeCampaign = result.detected
     ? await prisma.campaign.findFirst({
-        where: { opportunityId: result.opportunityId },
+        where: {
+          opportunityId: result.opportunityId,
+          status: { in: NON_TERMINAL_CAMPAIGN_STATUSES },
+        },
         orderBy: { createdAt: "desc" },
         select: { id: true, status: true },
       })
     : null;
+
+  // Shown for context when there is no active campaign: what the last run
+  // did, so drafting again is an informed choice rather than a blind repeat.
+  const lastFinishedCampaign =
+    result.detected && !activeCampaign
+      ? await prisma.campaign.findFirst({
+          where: {
+            opportunityId: result.opportunityId,
+            status: { notIn: NON_TERMINAL_CAMPAIGN_STATUSES },
+          },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            _count: { select: { targets: true } },
+            targets: { where: { status: "PAID" }, select: { id: true } },
+          },
+        })
+      : null;
 
   const crossSell = merchant ? await detectCrossSellOpportunity(merchant.id) : { detected: false as const };
 
@@ -58,7 +86,18 @@ export default async function OpportunitiesPage() {
           result={result}
           narrative={narrative}
           policyCheck={policyCheck}
-          existingCampaign={existingCampaign}
+          existingCampaign={activeCampaign}
+          lastFinishedCampaign={
+            lastFinishedCampaign
+              ? {
+                  id: lastFinishedCampaign.id,
+                  status: lastFinishedCampaign.status,
+                  createdAt: lastFinishedCampaign.createdAt,
+                  targetCount: lastFinishedCampaign._count.targets,
+                  paidCount: lastFinishedCampaign.targets.length,
+                }
+              : null
+          }
         />
       ) : (
         <EmptyState

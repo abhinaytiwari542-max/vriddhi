@@ -37,16 +37,28 @@ function fallbackReasonCopy(
   }
 }
 
+export type LastFinishedCampaign = {
+  id: string;
+  status: string;
+  createdAt: Date;
+  targetCount: number;
+  paidCount: number;
+};
+
 export function OpportunityCard({
   result,
   narrative,
   policyCheck,
   existingCampaign,
+  lastFinishedCampaign,
 }: {
   result: Extract<AbandonedCheckoutResult, { detected: true }>;
   narrative?: NarrativeResult;
   policyCheck?: PolicyCheckResult;
+  /** A campaign still in flight — blocks drafting another. */
   existingCampaign?: { id: string; status: string } | null;
+  /** The previous run, shown as context when drafting again is allowed. */
+  lastFinishedCampaign?: LastFinishedCampaign | null;
 }) {
   return (
     <div className="glow-ai rounded-2xl border border-ai/20 bg-gradient-to-b from-ai/[0.06] to-transparent p-6">
@@ -171,7 +183,37 @@ export function OpportunityCard({
             </Link>
           </div>
         ) : (
-          <DraftCampaignButton opportunityId={result.opportunityId} />
+          <div className="space-y-2">
+            {lastFinishedCampaign && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <StatusBadge
+                  variant={lastFinishedCampaign.status === "COMPLETED" ? "success" : "info"}
+                >
+                  Last run {lastFinishedCampaign.status.toLowerCase()}
+                </StatusBadge>
+                <span>
+                  {lastFinishedCampaign.targetCount} links ·{" "}
+                  {lastFinishedCampaign.paidCount} paid ·{" "}
+                  {lastFinishedCampaign.createdAt.toLocaleDateString()}
+                </span>
+                <Link
+                  href="/campaigns"
+                  className="font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                  View →
+                </Link>
+              </div>
+            )}
+            <DraftCampaignButton
+              opportunityId={result.opportunityId}
+              label={lastFinishedCampaign ? "Draft another campaign" : "Draft recovery campaign"}
+            />
+            {lastFinishedCampaign && (
+              <p className="text-[11px] text-muted-foreground">
+                Customers who already paid are excluded from a new run.
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -18,7 +18,16 @@ type EvidenceRow = {
   amount: number; // paise
 };
 
-const NON_TERMINAL_CAMPAIGN_STATUSES: CampaignStatus[] = [
+/**
+ * Statuses that still "own" an opportunity — a campaign in any of these is
+ * live work, so a second one must not be drafted alongside it. Exported
+ * because the Opportunities page needs the exact same definition to decide
+ * whether to offer the draft button; when it kept its own idea of this, the
+ * UI hid the button for COMPLETED campaigns too and a merchant could never
+ * run a second campaign on the same opportunity even though the engine
+ * allowed it.
+ */
+export const NON_TERMINAL_CAMPAIGN_STATUSES: CampaignStatus[] = [
   "DRAFT",
   "PENDING_APPROVAL",
   "APPROVED",

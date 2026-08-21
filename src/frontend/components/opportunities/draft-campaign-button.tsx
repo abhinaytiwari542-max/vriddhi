@@ -5,7 +5,13 @@ import Link from "next/link";
 
 import { draftCampaignAction } from "@/backend/actions/opportunities-actions";
 
-export function DraftCampaignButton({ opportunityId }: { opportunityId: string }) {
+export function DraftCampaignButton({
+  opportunityId,
+  label = "Draft recovery campaign",
+}: {
+  opportunityId: string;
+  label?: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<{
     status: "drafted" | "blocked" | "already_drafted" | "error";
@@ -34,7 +40,7 @@ export function DraftCampaignButton({ opportunityId }: { opportunityId: string }
         }
         className="w-fit rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
       >
-        {pending ? "Checking policy…" : "Draft recovery campaign"}
+        {pending ? "Checking policy…" : label}
       </button>
       {result?.status === "blocked" && (
         <p className="text-xs text-destructive">{result.message}</p>
