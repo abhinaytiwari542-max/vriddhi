@@ -5,8 +5,10 @@ import { getDemoMerchant } from "@/lib/demo-merchant";
 import { detectAbandonedCheckoutOpportunity } from "@/lib/services/opportunity-engine";
 import { getOpportunityNarrative } from "@/lib/services/opportunity-narrative";
 import { evaluatePolicy } from "@/lib/services/policy-engine";
+import { detectCrossSellOpportunity } from "@/lib/services/cross-sell-engine";
 import { EmptyState } from "@/components/empty-state";
 import { OpportunityCard } from "@/components/opportunities/opportunity-card";
+import { CrossSellCard } from "@/components/opportunities/cross-sell-card";
 
 // Opportunity detection must re-run on every request, not be cached as
 // static HTML at build time.
@@ -37,6 +39,8 @@ export default async function OpportunitiesPage() {
       })
     : null;
 
+  const crossSell = merchant ? await detectCrossSellOpportunity(merchant.id) : { detected: false as const };
+
   return (
     <div className="space-y-8">
       <div>
@@ -64,6 +68,8 @@ export default async function OpportunitiesPage() {
           description="No abandoned checkouts found in your order history right now — run the seed script (Phase 6) to generate demo data, or check back after your next sync."
         />
       )}
+
+      {crossSell.detected && <CrossSellCard result={crossSell} />}
     </div>
   );
 }

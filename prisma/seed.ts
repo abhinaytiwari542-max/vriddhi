@@ -51,6 +51,20 @@ const PRODUCTS: SeedProduct[] = [
   { name: "Limited Edition Racing Flats", price: 549900, variants: ["9", "10"], available: false },
 ];
 
+// Phase 16 — deliberate purchase affinity so the cross-sell engine (basket
+// analysis over real OrderItem rows) has a genuine, non-random signal to
+// find, the same way Phase 6's abandoned-checkout data was built with a
+// real high-intent signal baked in rather than pure noise.
+const AFFINITY_PARTNER: Record<string, string> = {
+  "Trailblazer Running Shoes": "Performance Ankle Socks (3-pack)",
+  "CloudStep Walking Shoes": "Performance Ankle Socks (3-pack)",
+  "Urban Sprint Sneakers": "Moisture-Wick Sports Tee",
+  "FlexFit Training Shoes": "Moisture-Wick Sports Tee",
+  "Marathon Pro Racers": "Compression Calf Sleeves",
+  "TrailGrip Hiking Boots": "Lightweight Running Cap",
+};
+const AFFINITY_BIAS = 0.65; // chance the 2nd item is the defined partner, not a random product
+
 function paise(rupees: number) {
   return Math.round(rupees * 100);
 }
@@ -163,12 +177,38 @@ async function main() {
   const failedPaymentCustomers = take(FAILED_PAYMENT_ORDERS); // attempted, card/payment failed
   // ~47 remaining customers stay order-less — first-touch/browse-only records.
 
+  const purchasableProducts = products.filter((p) => p.available);
+
+  function buildBasket() {
+    const primary = pick(purchasableProducts);
+    const basket = [primary];
+
+    const itemCount = randomInt(1, 100) <= 60 ? 1 : randomInt(1, 100) <= 75 ? 2 : 3;
+    // (60% chance 1 item, ~30% 2 items, ~10% 3 items — see the two nested
+    // ternary thresholds above.)
+
+    for (let i = 1; i < itemCount; i++) {
+      const partnerName = AFFINITY_PARTNER[basket[basket.length - 1].name];
+      const partner = partnerName
+        ? purchasableProducts.find((p) => p.name === partnerName)
+        : undefined;
+      const useAffinityPartner = partner && Math.random() < AFFINITY_BIAS && !basket.includes(partner);
+
+      const next = useAffinityPartner
+        ? partner
+        : pick(purchasableProducts.filter((p) => !basket.includes(p)));
+      basket.push(next);
+    }
+    return basket;
+  }
+
   let orderSeq = 0;
   let paymentSeq = 0;
   let paidOrderCount = 0;
 
   async function createPaidOrder(customerId: string, daysAgo: number) {
-    const amount = paise(randomInt(1200, 5500));
+    const basket = buildBasket();
+    const amount = basket.reduce((sum, p) => sum + p.price, 0);
     orderSeq += 1;
     const order = await prisma.order.create({
       data: {
@@ -180,6 +220,14 @@ async function main() {
         currency: "INR",
         createdAt: hoursAgo(daysAgo * 24 + randomInt(0, 23)),
       },
+    });
+    await prisma.orderItem.createMany({
+      data: basket.map((p) => ({
+        orderId: order.id,
+        productId: p.id,
+        quantity: 1,
+        unitPrice: p.price,
+      })),
     });
     paymentSeq += 1;
     await prisma.payment.create({
@@ -307,6 +355,10 @@ async function main() {
   console.log(`AOV:                 ₹${(aov / 100).toFixed(0)}`);
   console.log(`Conversion:          ${conversion.toFixed(1)}%`);
   console.log(`Abandoned cart value: ₹${(abandonedTotal / 100).toLocaleString("en-IN")}`);
+
+  const itemCount = await prisma.orderItem.count();
+  console.log(`Order line items:    ${itemCount}`);
+  console.log(`(basket sizes vary 1-3 items, with deliberate product affinity — see AFFINITY_PARTNER)`);
 }
 
 main()

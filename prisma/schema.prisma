@@ -112,6 +112,7 @@ model Merchant {
   agentActions  AgentAction[]
   policy        Policy?
   auditLogs     AuditLog[]
+  productCrossSells ProductCrossSell[]
 
   @@map("merchants")
 }
@@ -160,9 +161,51 @@ model Product {
   createdAt         DateTime @default(now()) @map("created_at")
 
   merchant Merchant @relation(fields: [merchantId], references: [id])
+  orderItems OrderItem[]
+  crossSellsFrom ProductCrossSell[] @relation("BaseProduct")
+  crossSellsTo   ProductCrossSell[] @relation("RecommendedProduct")
 
   @@index([merchantId])
   @@map("products")
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String @map("order_id")
+  productId String @map("product_id")
+  quantity  Int    @default(1)
+  unitPrice Int    @map("unit_price") // paise, price at time of purchase
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// Phase 16 — cross-sell opportunity engine output. A row here means the
+// merchant approved recommending `recommendedProduct` alongside `product`;
+// support/confidence/lift are the real, computed basket-analysis numbers
+// behind that recommendation, kept for traceability.
+model ProductCrossSell {
+  id                    String   @id @default(cuid())
+  merchantId            String   @map("merchant_id")
+  productId             String   @map("product_id")
+  recommendedProductId  String   @map("recommended_product_id")
+  opportunityId         String   @map("opportunity_id")
+  support               Float
+  confidence            Float
+  lift                  Float
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  merchant           Merchant    @relation(fields: [merchantId], references: [id])
+  product            Product     @relation("BaseProduct", fields: [productId], references: [id])
+  recommendedProduct Product     @relation("RecommendedProduct", fields: [recommendedProductId], references: [id])
+  opportunity        Opportunity @relation(fields: [opportunityId], references: [id])
+
+  @@unique([productId, recommendedProductId])
+  @@map("product_cross_sells")
 }
 
 model Order {
@@ -180,6 +223,7 @@ model Order {
   customer        Customer         @relation(fields: [customerId], references: [id])
   payments        Payment[]
   campaignTargets CampaignTarget[]
+  items           OrderItem[]
 
   @@index([merchantId, status])
   @@map("orders")
@@ -227,6 +271,7 @@ model Opportunity {
 
   merchant  Merchant   @relation(fields: [merchantId], references: [id])
   campaigns Campaign[]
+  crossSells ProductCrossSell[]
 
   @@index([merchantId, status])
   @@map("opportunities")
