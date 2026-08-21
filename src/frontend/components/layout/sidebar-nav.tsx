@@ -9,6 +9,7 @@ import {
   Megaphone,
   ScrollText,
   Settings,
+  ShieldCheck,
   ShoppingBag,
   Sparkles,
 } from "lucide-react";
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/agent", label: "Agent", icon: Bot },
   { href: "/buyer", label: "AI Buyer (Demo)", icon: ShoppingBag },
+  { href: "/ai-trust", label: "AI Trust", icon: ShieldCheck },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/audit", label: "Audit Trail", icon: ScrollText },
   { href: "/settings", label: "Settings", icon: Settings },

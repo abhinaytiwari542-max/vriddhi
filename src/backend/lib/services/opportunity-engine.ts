@@ -27,11 +27,11 @@ const HIGH_INTENT_RECENCY_HOURS = 48;
  * benchmarks (15-25% link conversion) — stated explicitly so the estimated
  * impact is never presented as a bare, unexplained number.
  */
-const ASSUMED_RECOVERY_RATE_LOW = 0.15;
-const ASSUMED_RECOVERY_RATE_HIGH = 0.25;
+export const ASSUMED_RECOVERY_RATE_LOW = 0.15;
+export const ASSUMED_RECOVERY_RATE_HIGH = 0.25;
 
 /** Flat per-customer discount used for the recommended recovery action. */
-const RECOVERY_DISCOUNT_PAISE = 10_000; // ₹100
+export const RECOVERY_DISCOUNT_PAISE = 10_000; // ₹100
 
 export type AbandonedCheckoutEvidenceRow = {
   orderId: string;

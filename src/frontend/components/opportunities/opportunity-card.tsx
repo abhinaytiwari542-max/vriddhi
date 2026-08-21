@@ -14,10 +14,17 @@ const RISK_VARIANT = {
   HIGH: "danger",
 } as const;
 
-function fallbackReasonCopy(reason: "no_api_key" | "invalid_output" | "api_error") {
+function fallbackReasonCopy(
+  reason: "no_api_key" | "invalid_output" | "api_error" | "ungrounded"
+) {
   switch (reason) {
     case "no_api_key":
       return "AI narration disabled — add GEMINI_API_KEY to enable it.";
+    case "ungrounded":
+      // The one failure mode worth stating outright: the model produced a
+      // figure the rules engine never computed, so the prose was withheld
+      // rather than shown. Saying so is the feature, not an apology.
+      return "AI summary withheld — it contained a number the rules engine never produced, so it was blocked before display. The figures below are unaffected.";
     case "invalid_output":
       return "AI explanation unavailable — the model's response didn't validate. Showing the rule-based summary.";
     case "api_error":
@@ -72,7 +79,15 @@ export function OpportunityCard({
             abandonment, or an above-typical cart value.
           </p>
           {narrative && !narrative.ok && (
-            <StatusBadge variant={narrative.reason === "no_api_key" ? "info" : "pending"}>
+            <StatusBadge
+              variant={
+                narrative.reason === "ungrounded"
+                  ? "danger"
+                  : narrative.reason === "no_api_key"
+                    ? "info"
+                    : "pending"
+              }
+            >
               {fallbackReasonCopy(narrative.reason)}
             </StatusBadge>
           )}
