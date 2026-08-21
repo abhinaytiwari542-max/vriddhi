@@ -9,6 +9,7 @@ import {
   rejectCampaign,
   type ApprovalActionResult,
 } from "@/lib/services/approval-engine";
+import { executeApprovedCampaign, type ExecutionResult } from "@/lib/services/campaign-execution";
 
 async function actorOrError(): Promise<{ actorUserId: string } | { error: string }> {
   const merchant = await getDemoMerchant();
@@ -51,5 +52,11 @@ export async function modifyCampaignAction(
 
   const result = await modifyCampaign(campaignId, actor.actorUserId, newDiscountRupees);
   if (result.ok) revalidateAll();
+  return result;
+}
+
+export async function executeCampaignAction(campaignId: string): Promise<ExecutionResult> {
+  const result = await executeApprovedCampaign(campaignId);
+  revalidateAll();
   return result;
 }
