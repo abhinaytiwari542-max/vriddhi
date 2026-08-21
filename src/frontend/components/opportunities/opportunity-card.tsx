@@ -204,10 +204,20 @@ export function OpportunityCard({
                 </Link>
               </div>
             )}
-            <DraftCampaignButton
-              opportunityId={result.opportunityId}
-              label={lastFinishedCampaign ? "Draft another campaign" : "Draft recovery campaign"}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <DraftCampaignButton
+                opportunityId={result.opportunityId}
+                label={
+                  lastFinishedCampaign ? "Draft another campaign" : "Draft recovery campaign"
+                }
+              />
+              <Link
+                href="/campaign-builder"
+                className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                Customize audience &amp; discount →
+              </Link>
+            </div>
             {lastFinishedCampaign && (
               <p className="text-[11px] text-muted-foreground">
                 Customers who already paid are excluded from a new run.

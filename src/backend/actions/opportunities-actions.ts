@@ -5,6 +5,10 @@ import { revalidatePath } from "next/cache";
 import { getDemoMerchant, getDemoUser } from "@/backend/lib/demo-merchant";
 import { createCampaign } from "@/backend/lib/ai/tools/propose-tools";
 import {
+  draftCustomCampaign,
+  type CustomCampaignResult,
+} from "@/backend/lib/services/custom-campaign";
+import {
   approveCrossSell,
   rejectCrossSell,
   type CrossSellDecisionResult,
@@ -54,6 +58,28 @@ export async function rejectCrossSellAction(opportunityId: string): Promise<Cros
   const result = await rejectCrossSell(opportunityId, user.id);
   if (result.ok) {
     revalidatePath("/opportunities");
+    revalidatePath("/audit");
+  }
+  return result;
+}
+
+/**
+ * Merchant-authored campaign draft. Deliberately a server action rather
+ * than an agent tool — see custom-campaign.ts for why choosing the numbers
+ * is the merchant's prerogative and not the model's.
+ */
+export async function draftCustomCampaignAction(input: {
+  opportunityId: string;
+  discountPaise: number;
+  customerIds: string[];
+}): Promise<CustomCampaignResult> {
+  const merchant = await getDemoMerchant();
+  if (!merchant) return { status: "error", message: "No merchant found." };
+
+  const result = await draftCustomCampaign(merchant.id, input);
+  if (result.status === "drafted") {
+    revalidatePath("/opportunities");
+    revalidatePath("/campaigns");
     revalidatePath("/audit");
   }
   return result;

@@ -9,6 +9,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   "opportunity.narrative_failed": "AI explanation unavailable",
   "opportunity.narrative_blocked": "AI summary blocked — contained an unverified figure",
   "campaign.drafted": "Recovery campaign drafted — awaiting approval",
+  "campaign.drafted_custom": "Custom campaign drafted — audience and discount chosen by you",
   "campaign.blocked": "Campaign draft blocked by policy",
   "campaign.approved": "Merchant approved",
   "campaign.rejected": "Merchant rejected",
