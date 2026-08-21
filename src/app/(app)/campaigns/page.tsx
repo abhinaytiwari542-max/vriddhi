@@ -13,9 +13,7 @@ export const dynamic = "force-dynamic";
 
 const HISTORY_BADGE = {
   REJECTED: "danger",
-  EXECUTING: "info",
   COMPLETED: "success",
-  HALTED: "pending",
   FAILED: "danger",
 } as const;
 
@@ -36,8 +34,12 @@ export default async function CampaignsPage() {
     : [];
 
   const drafts = campaigns.filter((c) => c.status === "DRAFT");
-  const actionable = campaigns.filter((c) => c.status === "APPROVED" || c.status === "HALTED");
-  const history = campaigns.filter((c) => !["DRAFT", "APPROVED", "HALTED"].includes(c.status));
+  const actionable = campaigns.filter(
+    (c) => c.status === "APPROVED" || c.status === "HALTED" || c.status === "EXECUTING"
+  );
+  const history = campaigns.filter(
+    (c) => !["DRAFT", "APPROVED", "HALTED", "EXECUTING"].includes(c.status)
+  );
 
   return (
     <div className="space-y-10">
@@ -92,7 +94,7 @@ export default async function CampaignsPage() {
                 discountAmount={c.discountAmount}
                 maxCost={c.maxCost}
                 isSimulated={isSimulated}
-                status={c.status as "APPROVED" | "HALTED"}
+                status={c.status as "APPROVED" | "HALTED" | "EXECUTING"}
                 createdCount={createdCount}
                 remainingCount={remainingCount}
                 haltReason={c.failures[0]?.reason}

@@ -1,6 +1,7 @@
 import { prisma } from "@/backend/lib/db";
 import { evaluatePolicy } from "@/backend/lib/services/policy-engine";
 import { getRazorpayGateway } from "@/backend/lib/razorpay/gateway";
+import { extractRazorpayErrorMessage } from "@/backend/lib/razorpay/types";
 
 type EvidenceRow = { amount: number };
 
@@ -56,9 +57,15 @@ export async function executeApprovedCampaign(
     include: { targets: { include: { customer: true } }, opportunity: true },
   });
 
-  if (campaign.status !== "APPROVED" && campaign.status !== "HALTED") {
+  if (campaign.status !== "APPROVED" && campaign.status !== "HALTED" && campaign.status !== "EXECUTING") {
     return { ok: false, error: "Campaign is not in a state that can be executed." };
   }
+  // EXECUTING is accepted alongside HALTED because an uncaught crash mid-loop
+  // (observed live: a rate-limited reconciliation call escaping uncaught,
+  // fixed above) can leave a campaign here without ever reaching a final
+  // status. Per-target status is the real source of truth for what's left
+  // to do either way, so resuming from EXECUTING is exactly as safe as
+  // resuming from HALTED.
 
   const evidence = campaign.opportunity.evidence as unknown as EvidenceRow[];
   const averageCartValue = evidence.reduce((sum, e) => sum + e.amount, 0) / Math.max(evidence.length, 1);
@@ -172,7 +179,7 @@ export async function executeApprovedCampaign(
       });
       created++;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = extractRazorpayErrorMessage(err);
       await prisma.auditLog.create({
         data: {
           merchantId: campaign.merchantId,
@@ -187,18 +194,32 @@ export async function executeApprovedCampaign(
       });
 
       // Reconciliation — ask the gateway directly rather than assume the
-      // timeout means nothing happened.
-      const reconciled = await gateway.findPaymentLinkByReference(target.id);
+      // timeout means nothing happened. This call can itself fail (found
+      // live: a create-call 429 from Razorpay's real rate limit is often
+      // immediately followed by the reconciliation call also getting
+      // rate-limited), so it needs its own try/catch — an unhandled
+      // failure here previously escaped this entire function uncaught,
+      // leaving the campaign stuck in EXECUTING with no Failure record.
+      // Inconclusive reconciliation is treated the same as "not found":
+      // halt rather than guess.
+      let reconciled: Awaited<ReturnType<typeof gateway.findPaymentLinkByReference>> = null;
+      let reconciliationError: string | undefined;
+      try {
+        reconciled = await gateway.findPaymentLinkByReference(target.id);
+      } catch (reconcileErr) {
+        reconciliationError = extractRazorpayErrorMessage(reconcileErr);
+      }
       await prisma.auditLog.create({
         data: {
           merchantId: campaign.merchantId,
           actor: "SYSTEM",
           action: "payment_link.reconciled",
           input: { targetId: target.id },
-          output: { foundOnGateway: Boolean(reconciled) },
-          status: "SUCCESS",
+          output: { foundOnGateway: Boolean(reconciled), reconciliationError },
+          status: reconciliationError ? "FAILURE" : "SUCCESS",
           relatedEntityType: "CampaignTarget",
           relatedEntityId: target.id,
+          error: reconciliationError,
         },
       });
 
@@ -214,15 +235,16 @@ export async function executeApprovedCampaign(
         continue;
       }
 
-      // Confirmed: nothing was created. Halt — do not touch the remaining
+      // Either confirmed nothing was created, or reconciliation itself
+      // couldn't tell us — both halt rather than touch the remaining
       // targets this run.
       await prisma.campaignTarget.update({ where: { id: target.id }, data: { status: "FAILED" } });
       await prisma.failure.create({
         data: {
           campaignId,
           failedAtTargetId: target.id,
-          reason: message,
-          reconciliationResult: { foundOnGateway: false },
+          reason: reconciliationError ? `${message} (reconciliation also failed: ${reconciliationError})` : message,
+          reconciliationResult: { foundOnGateway: false, reconciliationError },
         },
       });
       haltReason = message;

@@ -1,6 +1,7 @@
 import { prisma } from "@/backend/lib/db";
 import { getDemoMerchant } from "@/backend/lib/demo-merchant";
 import { getRazorpayGateway } from "@/backend/lib/razorpay/gateway";
+import { extractRazorpayErrorMessage } from "@/backend/lib/razorpay/types";
 import { formatInr } from "@/frontend/lib/format";
 
 // ---------------------------------------------------------------------------
@@ -215,7 +216,7 @@ export async function completeBuyerPurchase(
 
     return { ok: true, paymentLinkId: link.id, mode: gateway.mode };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const message = extractRazorpayErrorMessage(err);
 
     // Order stays CREATED — not PAID, not CANCELLED. No Payment row is
     // written as CAPTURED. The customer can retry the exact same order;

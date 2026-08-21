@@ -32,7 +32,7 @@ export function ExecutionCard({
   discountAmount: number;
   maxCost: number;
   isSimulated: boolean;
-  status: "APPROVED" | "HALTED";
+  status: "APPROVED" | "HALTED" | "EXECUTING";
   createdCount?: number;
   remainingCount?: number;
   haltReason?: string;
@@ -69,9 +69,9 @@ export function ExecutionCard({
         </div>
 
         <p className="mb-4 text-xs text-muted-foreground">
-          {failure.createdCount} of {failure.createdCount + failure.remainingCount} links were
-          created before this happened — retrying will only attempt the remaining{" "}
-          {failure.remainingCount}, never the ones already done.
+          {failure.createdCount} of {audienceCount} links were created before this happened —
+          retrying will only attempt the remaining {failure.remainingCount}, never the ones
+          already done.
         </p>
 
         {error && (
@@ -91,7 +91,7 @@ export function ExecutionCard({
               } else if (result.halted) {
                 setFailure({
                   reason: result.haltReason ?? "Unknown failure",
-                  createdCount: result.created + failure.createdCount,
+                  createdCount: result.created + result.alreadyDone,
                   remainingCount: result.remaining,
                 });
               } else {
@@ -112,19 +112,26 @@ export function ExecutionCard({
     <div className="rounded-2xl border border-border bg-card p-6">
       <div className="mb-4 flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Approved — ready to execute
+          {status === "EXECUTING" ? "Interrupted — resume execution" : "Approved — ready to execute"}
         </span>
         <div className="flex items-center gap-2">
           <StatusBadge variant={isSimulated ? "pending" : "success"}>
             {isSimulated ? "SIMULATED gateway" : "Razorpay test mode"}
           </StatusBadge>
-          <StatusBadge variant="success">APPROVED</StatusBadge>
+          <StatusBadge variant={status === "EXECUTING" ? "pending" : "success"}>{status}</StatusBadge>
         </div>
       </div>
 
       <h3 className="mb-4 text-lg font-semibold text-foreground">
         Send Razorpay payment links to {audienceCount} customers
       </h3>
+      {status === "EXECUTING" && (
+        <p className="mb-4 text-xs text-muted-foreground">
+          A previous run of this campaign was interrupted before it could record a final
+          status. {createdCount} of {audienceCount} links were already created — resuming will
+          only attempt the remaining {remainingCount}, never the ones already done.
+        </p>
+      )}
       {isSimulated && (
         <p className="mb-4 text-xs text-muted-foreground">
           No real Razorpay test account is connected — this will call a simulated gateway
@@ -177,7 +184,7 @@ export function ExecutionCard({
                 } else if (result.halted) {
                   setFailure({
                     reason: result.haltReason ?? "Unknown failure",
-                    createdCount: result.created,
+                    createdCount: result.created + result.alreadyDone,
                     remainingCount: result.remaining,
                   });
                 } else {
