@@ -18,6 +18,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   "campaign.execution_blocked": "Execution blocked by policy",
   "campaign.execution.finished": "Execution finished",
   "payment_link.created": "Razorpay payment link created",
+  "payment_link.found_existing": "Found an existing payment link before creating a new one",
   "payment_link.failed": "Razorpay payment link failed",
   "duplicate_prevention.campaign_targets_skipped": "Duplicate payment links prevented on retry",
   "duplicate_prevention.buyer_reauthorization_blocked": "Duplicate purchase authorization blocked",

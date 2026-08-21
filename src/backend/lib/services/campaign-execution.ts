@@ -135,7 +135,16 @@ export async function executeApprovedCampaign(
         throw new Error("Payment service timeout (simulated for demo).");
       }
 
-      const link = await gateway.createPaymentLink({
+      // Check-before-create: ask Razorpay directly whether a link already
+      // exists for this reference before ever calling create. Razorpay's
+      // Payment Links API has no request-level idempotency header (unlike
+      // their Payouts API, which does) — a client-generated reference_id
+      // looked up via findPaymentLinkByReference is the actual supported
+      // mechanism. Checking it here, not just after a failure, protects
+      // against our own DB state being stale or restored from an older
+      // snapshot, not only against a failed network call.
+      const existing = await gateway.findPaymentLinkByReference(target.id);
+      const link = existing ?? (await gateway.createPaymentLink({
         amountPaise: target.amount,
         currency: "INR",
         customerName: target.customer.name,
@@ -143,7 +152,7 @@ export async function executeApprovedCampaign(
         customerContact: target.customer.phone,
         description: `Vriddhi recovery offer${gateway.mode === "simulated" ? " (SIMULATED — no real charge)" : ""}`,
         referenceId: target.id,
-      });
+      }));
 
       await prisma.campaignTarget.update({
         where: { id: target.id },
@@ -153,7 +162,7 @@ export async function executeApprovedCampaign(
         data: {
           merchantId: campaign.merchantId,
           actor: "RAZORPAY",
-          action: "payment_link.created",
+          action: existing ? "payment_link.found_existing" : "payment_link.created",
           input: { targetId: target.id, amount: target.amount },
           output: { paymentLinkId: link.id, shortUrl: link.shortUrl, mode: gateway.mode },
           status: "SUCCESS",

@@ -175,7 +175,11 @@ export async function completeBuyerPurchase(
       throw new Error("Payment declined (simulated for demo).");
     }
 
-    const link = await gateway.createPaymentLink({
+    // Check-before-create, same rationale as campaign-execution.ts: ask
+    // Razorpay directly by reference_id first, since Payment Links has no
+    // request-level idempotency header of its own to lean on.
+    const existingLink = await gateway.findPaymentLinkByReference(order.id);
+    const link = existingLink ?? (await gateway.createPaymentLink({
       amountPaise: order.amount,
       currency: "INR",
       customerName: order.customer.name,
@@ -183,7 +187,7 @@ export async function completeBuyerPurchase(
       customerContact: order.customer.phone,
       description: `AI buyer purchase — ${item.product.name}${gateway.mode === "simulated" ? " (SIMULATED)" : ""}`,
       referenceId: order.id,
-    });
+    }));
 
     await prisma.payment.create({
       data: {

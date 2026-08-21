@@ -67,8 +67,11 @@ be riskier than that.
 - A full audit trail and an analytics dashboard that reports
   "Not yet measured" rather than a fabricated number where that's the
   honest state (see below).
-- 37 automated tests covering the guardrails specifically — not
-  incidental coverage, the actual point of the test suite.
+- 45 automated tests covering the guardrails specifically — not
+  incidental coverage, the actual point of the test suite. A later
+  addition (Phase 25) added a deliberate red-team suite: structural
+  attack tests plus a live jailbreak-prompt run against the real model,
+  see `docs/RED-TEAM-REPORT.md`.
 - A live deployment (Vercel + Neon), a public GitHub repo, and — after
   the build was functionally done — a full light-theme redesign done at
   the user's request without touching any of the above.

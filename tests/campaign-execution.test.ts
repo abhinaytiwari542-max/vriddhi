@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { executeApprovedCampaign } from "@/backend/lib/services/campaign-execution";
+import { getRazorpayGateway } from "@/backend/lib/razorpay/gateway";
 import { prisma } from "@/backend/lib/db";
 import { createCustomer, createMerchant, createOpportunity } from "./helpers/fixtures";
 
@@ -57,6 +58,42 @@ describe("executeApprovedCampaign — the sole Razorpay-gateway chokepoint (simu
     expect((await prisma.campaign.findUniqueOrThrow({ where: { id: campaign.id } })).status).toBe("COMPLETED");
     const linked = await prisma.campaignTarget.count({ where: { campaignId: campaign.id, status: "LINK_CREATED" } });
     expect(linked).toBe(5);
+  });
+
+  it("checks with the gateway by reference before creating, so a stale/restored DB can't cause a duplicate", async () => {
+    const { merchant } = await createMerchant();
+    const campaign = await approvedCampaign(merchant.id, 1);
+    const target = (await prisma.campaignTarget.findFirstOrThrow({ where: { campaignId: campaign.id } }));
+
+    // Simulate "Razorpay already has this, but our DB doesn't know" —
+    // e.g. a restore from an older snapshot after a successful run.
+    // Target status is left PENDING on purpose.
+    const preExisting = await getRazorpayGateway().createPaymentLink({
+      amountPaise: target.amount,
+      currency: "INR",
+      customerName: "Pre-existing Link Customer",
+      description: "seeded directly against the gateway, not through execution",
+      referenceId: target.id,
+    });
+
+    const result = await executeApprovedCampaign(campaign.id);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.created).toBe(1);
+
+    const updated = await prisma.campaignTarget.findUniqueOrThrow({ where: { id: target.id } });
+    expect(updated.status).toBe("LINK_CREATED");
+    // Reused the pre-existing link — did not create a second one.
+    expect(updated.razorpayPaymentLinkId).toBe(preExisting.id);
+
+    const foundExistingLog = await prisma.auditLog.findFirst({
+      where: { merchantId: merchant.id, action: "payment_link.found_existing", relatedEntityId: target.id },
+    });
+    expect(foundExistingLog).not.toBeNull();
+    const createdLog = await prisma.auditLog.findFirst({
+      where: { merchantId: merchant.id, action: "payment_link.created", relatedEntityId: target.id },
+    });
+    expect(createdLog).toBeNull();
   });
 
   it("halts at the injected failure index, leaving later targets untouched, and a retry finishes only the remainder without duplicating earlier links", async () => {

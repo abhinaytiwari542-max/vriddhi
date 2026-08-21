@@ -42,6 +42,8 @@ that just shows a chart and leaves the work to them.
 | Automated test suite (guardrail, failure, payment, security, detection) | 21 | Shipped, 37 tests |
 | Light, premium UI (redesigned from an original dark theme) | 5, 23.5 | Shipped |
 | Live deployment (Vercel + Neon) | 23 | Shipped |
+| Red-team suite (structural attacks + live jailbreak-prompt run) | 25 | Shipped, 7 additional tests, see `docs/RED-TEAM-REPORT.md` |
+| Check-before-create gateway hardening | 25 | Shipped |
 
 ## 4. What it explicitly does NOT do
 
@@ -82,9 +84,10 @@ actually in:
   live from Postgres, verified against direct SQL queries at Phase 20/21,
   not asserted from return values alone.
 - **Measured, about the guardrails themselves (the actual differentiator):**
-  37 automated tests confirm the policy engine, approval workflow,
+  45 automated tests confirm the policy engine, approval workflow,
   execution idempotency, and duplicate-prevention logic hold under
-  adversarial and failure conditions — see `docs/PHASE-21-TESTING.md`.
+  adversarial and failure conditions — see `docs/PHASE-21-TESTING.md` and
+  `docs/RED-TEAM-REPORT.md`.
 
 ## 7. Non-goals (stated once, not re-litigated per phase)
 

@@ -13,6 +13,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "test:agent": "tsx scripts/test-agent.ts",
+    "red-team:live": "tsx scripts/red-team-live.ts",
     "test": "vitest run"
   },
   "dependencies": {

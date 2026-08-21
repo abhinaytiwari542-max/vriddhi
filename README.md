@@ -26,7 +26,8 @@ vs. proposed. Other docs, in the order you'd probably want them:
 | [`docs/AI-EVAL-REPORT.md`](docs/AI-EVAL-REPORT.md) | What was actually observed about the LLM's behavior vs. what would need a real eval harness |
 | [`docs/EXPERIMENT-PLAN.md`](docs/EXPERIMENT-PLAN.md) | A proposed (not run) randomized trial to validate the recovery-rate assumption |
 | [`docs/FAILURE-HANDLING-DEMO.md`](docs/FAILURE-HANDLING-DEMO.md) | How to reproduce the halt/reconcile/retry demo live |
-| [`docs/PHASE-21-TESTING.md`](docs/PHASE-21-TESTING.md) | What the 37 automated tests cover, and what they explicitly don't |
+| [`docs/PHASE-21-TESTING.md`](docs/PHASE-21-TESTING.md) | What the original 37 automated tests cover, and what they explicitly don't |
+| [`docs/RED-TEAM-REPORT.md`](docs/RED-TEAM-REPORT.md) | Structural attack tests plus a real live-prompt jailbreak run against the model itself |
 | [`docs/PORTFOLIO-MATERIALS.md`](docs/PORTFOLIO-MATERIALS.md) | Short description, resume bullets, interview narrative |
 
 ## What's real here, and what's deliberately simulated
@@ -34,7 +35,8 @@ vs. proposed. Other docs, in the order you'd probably want them:
 - **Real**: the Postgres data model, the policy/guardrail engine, the
   approval workflow, the audit trail, halt-and-retry failure handling
   with idempotent execution, the cross-sell basket analysis, the Gemini
-  AI narration layer, and 37 automated tests covering all of the above.
+  AI narration layer, and 45 automated tests covering all of the above
+  (37 from the original suite, plus a red-team suite added at Phase 25).
 - **Simulated, by explicit design choice**: Razorpay payment links. There
   was no Razorpay test-mode account available while building this (needs
   business/GST details), so a `SimulatedRazorpayGateway` mimics the real
