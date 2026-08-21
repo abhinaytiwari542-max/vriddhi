@@ -104,7 +104,7 @@ export function CrossSellCard({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-black/20 p-3">
+    <div className="rounded-lg bg-muted p-3">
       <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
       <div className="text-sm font-semibold text-foreground">{value}</div>
     </div>

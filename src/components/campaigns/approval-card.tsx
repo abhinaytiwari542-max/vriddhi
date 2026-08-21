@@ -131,7 +131,7 @@ export function ApprovalCard({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-black/20 p-3">
+    <div className="rounded-lg bg-muted p-3">
       <dt className="text-[11px] font-medium text-muted-foreground">{label}</dt>
       <dd className="text-sm font-semibold text-foreground">{value}</dd>
     </div>

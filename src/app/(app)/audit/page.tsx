@@ -37,7 +37,7 @@ export default async function AuditPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
           Audit Trail
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -55,7 +55,7 @@ export default async function AuditPage() {
       ) : (
         <div className="divide-y divide-border rounded-2xl border border-border font-mono">
           {logs.map((log) => (
-            <details key={log.id} className="group p-4 open:bg-black/10">
+            <details key={log.id} className="group p-4 open:bg-muted/60">
               <summary className="flex cursor-pointer flex-wrap items-center gap-3 text-xs [&::-webkit-details-marker]:hidden">
                 <span className="tabular-nums text-muted-foreground">
                   {log.timestamp.toLocaleString(undefined, {

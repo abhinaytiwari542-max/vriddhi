@@ -41,7 +41,7 @@ export default async function CampaignsPage() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Campaigns</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Campaigns</h1>
         <p className="text-sm text-muted-foreground">
           Drafted, approved, executed, and rejected recovery actions.
         </p>

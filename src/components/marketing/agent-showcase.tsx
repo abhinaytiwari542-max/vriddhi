@@ -133,7 +133,7 @@ function StepBody({
           ))}
         </ul>
         <p className="text-foreground">{body.action}</p>
-        <dl className="grid grid-cols-2 gap-2 rounded-lg bg-black/20 p-3 text-xs">
+        <dl className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-3 text-xs">
           <dt className="text-muted-foreground">Estimated cost</dt>
           <dd className="text-right text-foreground">{body.cost}</dd>
           <dt className="text-muted-foreground">Expected impact</dt>

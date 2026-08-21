@@ -12,7 +12,7 @@ export default async function SettingsPage() {
   if (!merchant) {
     return (
       <div className="space-y-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
         <EmptyState
           icon={SettingsIcon}
           title="No merchant found"
@@ -27,7 +27,7 @@ export default async function SettingsPage() {
   return (
     <div className="max-w-xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
         <p className="text-sm text-muted-foreground">
           Deterministic spend limits — the AI agent can never override these,
           no matter what it&rsquo;s asked to do.

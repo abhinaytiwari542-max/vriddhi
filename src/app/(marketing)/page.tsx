@@ -33,7 +33,7 @@ export default async function LandingPage() {
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center gap-16 px-6 py-16 lg:flex-row lg:items-center lg:gap-12 lg:py-0">
         <div className="max-w-md text-center lg:text-left">
-          <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl">
+          <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-6xl">
             Growth for merchants,{" "}
             <span className="text-gradient-ai">approved by merchants</span>.
           </h1>

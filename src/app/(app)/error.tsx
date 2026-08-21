@@ -20,7 +20,7 @@ export default function AppError({
         <TriangleAlert className="size-6" />
       </span>
       <div className="space-y-1">
-        <h1 className="text-lg font-semibold text-foreground">Something went wrong</h1>
+        <h1 className="text-xl font-bold text-foreground">Something went wrong</h1>
         <p className="max-w-sm text-sm text-muted-foreground">
           This page hit an unexpected error. Nothing was charged or changed as a result —
           every money-moving action here requires its own explicit step.

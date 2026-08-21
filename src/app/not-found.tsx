@@ -8,7 +8,7 @@ export default function NotFound() {
         <Compass className="size-6" />
       </span>
       <div className="space-y-1">
-        <h1 className="text-lg font-semibold text-foreground">Page not found</h1>
+        <h1 className="text-xl font-bold text-foreground">Page not found</h1>
         <p className="max-w-sm text-sm text-muted-foreground">
           That page doesn&rsquo;t exist. Head back to the dashboard.
         </p>

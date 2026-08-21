@@ -133,15 +133,15 @@ export function ExecutionCard({
       )}
 
       <dl className="mb-5 grid grid-cols-3 gap-3 text-sm">
-        <div className="rounded-lg bg-black/20 p-3">
+        <div className="rounded-lg bg-muted p-3">
           <dt className="text-[11px] font-medium text-muted-foreground">Audience</dt>
           <dd className="font-semibold text-foreground">{audienceCount} customers</dd>
         </div>
-        <div className="rounded-lg bg-black/20 p-3">
+        <div className="rounded-lg bg-muted p-3">
           <dt className="text-[11px] font-medium text-muted-foreground">Discount</dt>
           <dd className="font-semibold text-foreground">{formatInr(discountAmount)}</dd>
         </div>
-        <div className="rounded-lg bg-black/20 p-3">
+        <div className="rounded-lg bg-muted p-3">
           <dt className="text-[11px] font-medium text-muted-foreground">Max cost</dt>
           <dd className="font-semibold text-foreground">{formatInr(maxCost)}</dd>
         </div>

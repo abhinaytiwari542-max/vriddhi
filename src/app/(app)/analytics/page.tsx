@@ -210,7 +210,7 @@ export default async function AnalyticsPage() {
 function PageHeader() {
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Analytics</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-foreground">Analytics</h1>
       <p className="text-sm text-muted-foreground">
         Real numbers pulled from the database — nothing here is projected or simulated unless labeled as such.
       </p>

@@ -177,7 +177,7 @@ function Stat({
   value: string;
 }) {
   return (
-    <div className="rounded-lg bg-black/20 p-3">
+    <div className="rounded-lg bg-muted p-3">
       <div className="mb-1 flex items-center gap-1.5 text-muted-foreground">
         <Icon className="size-3.5" />
         <span className="text-[11px] font-medium">{label}</span>

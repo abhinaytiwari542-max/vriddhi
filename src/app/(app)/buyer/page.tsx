@@ -4,7 +4,7 @@ export default function BuyerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
           AI Buyer (Demo)
         </h1>
         <p className="text-sm text-muted-foreground">
